@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.dirname(fileURLToPath(import.meta.url)),
   },
+  // Keep the Firebase Admin SDK out of the bundle; it's a Node-only server dep.
+  serverExternalPackages: ["firebase-admin"],
 };
 
 export default nextConfig;

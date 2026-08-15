@@ -1,0 +1,28 @@
+# Firebase App Hosting backend configuration.
+# App Hosting builds and serves the Next.js app and auto-deploys on every push
+# to the connected GitHub branch.
+# Docs: https://firebase.google.com/docs/app-hosting/configure
+
+runConfig:
+  minInstances: 0
+  maxInstances: 2
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512
+
+# Firestore access uses the backend's service account (Application Default
+# Credentials) automatically, so no keys are needed for the waitlist store.
+#
+# To enable the optional confirmation email, create the secret in Cloud Secret
+# Manager, then uncomment the block below:
+#   firebase apphosting:secrets:set RESEND_API_KEY
+#
+# env:
+#   - variable: RESEND_API_KEY
+#     secret: RESEND_API_KEY
+#     availability:
+#       - RUNTIME
+#   - variable: WAITLIST_FROM_EMAIL
+#     value: "Bubbas Closet <hello@bubbascloset.com>"
+#     availability:
+#       - RUNTIME

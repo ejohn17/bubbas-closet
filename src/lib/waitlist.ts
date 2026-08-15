@@ -1,14 +1,17 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { FieldValue } from "firebase-admin/firestore";
+import { getDb } from "@/lib/firebase-admin";
 
 /**
  * Waitlist storage.
  *
- * Primary: Supabase Postgres via its PostgREST endpoint (no SDK dependency).
- * Set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY to enable it. This is the same
- * datastore the full app will use, so the waitlist carries forward at launch.
+ * Primary: Cloud Firestore (via firebase-admin), keeping everything in the
+ * Firebase project alongside App Hosting. Configured automatically on Firebase
+ * App Hosting; locally via GOOGLE_APPLICATION_CREDENTIALS or
+ * FIREBASE_SERVICE_ACCOUNT (see firebase-admin.ts).
  *
- * Dev fallback: when Supabase is not configured, records are appended to
+ * Dev fallback: when Firebase is not configured, records are appended to
  * .data/waitlist.json so the form works locally with zero setup.
  */
 
@@ -23,60 +26,38 @@ export type WaitlistResult =
   | { status: "duplicate" }
   | { status: "error"; message: string };
 
-const TABLE = process.env.WAITLIST_TABLE ?? "waitlist";
-
-function supabaseConfig() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return null;
-  return { url: url.replace(/\/$/, ""), key };
-}
+const COLLECTION = process.env.WAITLIST_COLLECTION ?? "waitlist";
 
 export async function addToWaitlist(
   input: WaitlistInput,
 ): Promise<WaitlistResult> {
-  const cfg = supabaseConfig();
-  if (cfg) return addViaSupabase(cfg, input);
+  const db = getDb();
+  if (db) return addViaFirestore(input);
   return addViaLocalFile(input);
 }
 
-async function addViaSupabase(
-  cfg: { url: string; key: string },
-  input: WaitlistInput,
-): Promise<WaitlistResult> {
+async function addViaFirestore(input: WaitlistInput): Promise<WaitlistResult> {
   try {
-    const res = await fetch(`${cfg.url}/rest/v1/${TABLE}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: cfg.key,
-        Authorization: `Bearer ${cfg.key}`,
-        Prefer: "return=minimal",
-      },
-      body: JSON.stringify({
-        email: input.email,
-        source: input.source ?? "landing",
-        consent: input.consent,
-      }),
+    const db = getDb();
+    if (!db) return addViaLocalFile(input);
+
+    // Use the normalized email as the document id so signups are deduped.
+    const ref = db.collection(COLLECTION).doc(input.email);
+    await ref.create({
+      email: input.email,
+      source: input.source ?? "landing",
+      consent: input.consent,
+      createdAt: FieldValue.serverTimestamp(),
     });
-
-    if (res.ok) return { status: "added" };
-
-    // Unique-violation on email -> already on the list.
-    if (res.status === 409) return { status: "duplicate" };
-
-    const body = await res.text();
-    if (body.includes("23505")) return { status: "duplicate" };
-
-    return {
-      status: "error",
-      message: `Storage responded ${res.status}`,
-    };
-  } catch (err) {
-    return {
-      status: "error",
-      message: err instanceof Error ? err.message : "Unknown storage error",
-    };
+    return { status: "added" };
+  } catch (err: unknown) {
+    // Firestore throws ALREADY_EXISTS (gRPC code 6) when the doc already exists.
+    const code = (err as { code?: number }).code;
+    const message = err instanceof Error ? err.message : String(err);
+    if (code === 6 || /already exists/i.test(message)) {
+      return { status: "duplicate" };
+    }
+    return { status: "error", message };
   }
 }
 

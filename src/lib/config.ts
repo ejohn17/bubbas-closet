@@ -5,12 +5,12 @@
  */
 
 export const BRAND = {
-  name: "Tarra",
+  name: "Bubbas Closet",
   tagline: "Rent a rotating wardrobe, monthly",
   description:
     "A tiered subscription clothing rental. Pick a monthly membership, choose your pieces, wear them, and swap for something new next month.",
   // Placeholder — swap for the real launch email once available.
-  contactEmail: "hello@example.com",
+  contactEmail: "hello@bubbascloset.com",
 };
 
 export type Tier = {
