@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --color-cream: #f6f3ee;
+  --color-ink: #1a1714;
+  --color-stone: #6b6259;
+  --color-accent: #9a7b4f;
+  --color-accent-dark: #7c6244;
+  --color-line: #e4ddd2;
+  --color-card: #fffdfa;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
