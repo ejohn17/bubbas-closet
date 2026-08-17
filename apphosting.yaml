@@ -10,19 +10,83 @@ runConfig:
   cpu: 1
   memoryMiB: 512
 
-# Firestore access uses the backend's service account (Application Default
-# Credentials) automatically, so no keys are needed for the waitlist store.
+# Firestore, Auth, and Storage access use the backend's service account
+# (Application Default Credentials) automatically — no keys needed.
 #
-# To enable the optional confirmation email, create the secret in Cloud Secret
-# Manager, then uncomment the block below:
-#   firebase apphosting:secrets:set RESEND_API_KEY
+# Secrets live in Cloud Secret Manager; create each one with:
+#   firebase apphosting:secrets:set STRIPE_SECRET_KEY
 #
-# env:
-#   - variable: RESEND_API_KEY
-#     secret: RESEND_API_KEY
-#     availability:
-#       - RUNTIME
-#   - variable: WAITLIST_FROM_EMAIL
-#     value: "Bubbas Closet <hello@bubbascloset.com>"
-#     availability:
-#       - RUNTIME
+# The NEXT_PUBLIC_* Firebase web config values are safe to commit as plain
+# values and must be available at BUILD time so they're inlined in the client
+# bundle. Fill them in from Firebase console → Project settings → Your apps.
+
+env:
+  # --- Public site config ---
+  - variable: NEXT_PUBLIC_SITE_URL
+    value: "https://REPLACE-with-your-app-hosting-domain"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # --- Firebase web app config (client-side Auth) ---
+  # - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+  #   value: ""
+  #   availability: [BUILD, RUNTIME]
+  # - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+  #   value: ""
+  #   availability: [BUILD, RUNTIME]
+  # - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+  #   value: ""
+  #   availability: [BUILD, RUNTIME]
+  # - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+  #   value: ""
+  #   availability: [BUILD, RUNTIME]
+  # - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+  #   value: ""
+  #   availability: [BUILD, RUNTIME]
+  # - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+  #   value: ""
+  #   availability: [BUILD, RUNTIME]
+
+  # --- Product image uploads ---
+  # - variable: FIREBASE_STORAGE_BUCKET
+  #   value: "your-project.firebasestorage.app"
+  #   availability: [RUNTIME]
+
+  # --- Stripe (secrets) ---
+  # - variable: STRIPE_SECRET_KEY
+  #   secret: STRIPE_SECRET_KEY
+  #   availability: [RUNTIME]
+  # - variable: STRIPE_WEBHOOK_SECRET
+  #   secret: STRIPE_WEBHOOK_SECRET
+  #   availability: [RUNTIME]
+  # - variable: STRIPE_PRICE_ESSENTIAL
+  #   value: "price_..."
+  #   availability: [RUNTIME]
+  # - variable: STRIPE_PRICE_SIGNATURE
+  #   value: "price_..."
+  #   availability: [RUNTIME]
+  # - variable: STRIPE_PRICE_PREMIER
+  #   value: "price_..."
+  #   availability: [RUNTIME]
+
+  # --- Transactional email (Resend) ---
+  # - variable: RESEND_API_KEY
+  #   secret: RESEND_API_KEY
+  #   availability: [RUNTIME]
+  # - variable: WAITLIST_FROM_EMAIL
+  #   value: "Bubbas Closet <hello@bubbascloset.com>"
+  #   availability: [RUNTIME]
+
+  # --- Mailchimp campaigns ---
+  # - variable: MAILCHIMP_API_KEY
+  #   secret: MAILCHIMP_API_KEY
+  #   availability: [RUNTIME]
+  # - variable: MAILCHIMP_AUDIENCE_ID
+  #   value: ""
+  #   availability: [RUNTIME]
+
+  # --- Scheduled jobs (Cloud Scheduler calls /api/cron/*) ---
+  # - variable: CRON_SECRET
+  #   secret: CRON_SECRET
+  #   availability: [RUNTIME]

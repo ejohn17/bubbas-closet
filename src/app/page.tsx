@@ -1,19 +1,12 @@
+import Link from "next/link";
 import { WaitlistForm } from "@/components/WaitlistForm";
+import { SiteHeader } from "@/components/SiteHeader";
 import { BRAND, TIERS, STEPS } from "@/lib/config";
 
 export default function Home() {
   return (
     <main className="flex flex-col">
-      {/* Header */}
-      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
-        <span className="text-xl font-semibold tracking-tight">{BRAND.name}</span>
-        <a
-          href="#waitlist"
-          className="rounded-full border border-line px-4 py-2 text-sm font-medium text-ink transition hover:border-accent hover:text-accent-dark"
-        >
-          Join the waitlist
-        </a>
-      </header>
+      <SiteHeader />
 
       {/* Hero */}
       <section className="mx-auto w-full max-w-6xl px-6 pb-16 pt-10 sm:pt-16">
@@ -40,6 +33,9 @@ export default function Home() {
             Choose the monthly plan that matches how much you like to switch
             things up. More items, more variety.
           </p>
+          <Link href="/subscribe" className="link mt-4 inline-block text-sm">
+            Compare memberships
+          </Link>
 
           <div className="mt-10 grid gap-6 md:grid-cols-3">
             {TIERS.map((tier) => (

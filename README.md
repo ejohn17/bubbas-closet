@@ -1,100 +1,133 @@
-# Bubbas Closet — Pre-launch Landing Page (Phase 0)
+# Bubbas Closet
 
-The pre-launch landing page and email waitlist for the tiered subscription
-clothing-rental service. Built with **Next.js 16 (App Router) + TypeScript +
-Tailwind CSS v4**, hosted on **Firebase App Hosting**, with the waitlist stored
-in **Cloud Firestore** — everything in one Firebase project. Built on Next.js
-intentionally so it carries forward into the full app.
+Tiered subscription clothing rental: members pick a monthly plan, choose pieces
+from a members-only closet up to their tier's item limit, wear them for the
+month, and swap for something new.
 
-See the project wiki (`../wiki`) for the full build plan: `build-plan.md`,
-`tech-stack.md`, and `landing-page-waitlist.md`.
+One **Next.js 16 (App Router) + TypeScript + Tailwind v4** app on **Firebase App
+Hosting**, with **Cloud Firestore** for data, **Firebase Auth** for sign-in,
+**Firebase Storage** for product images, and **Stripe** for billing.
+
+Full plan and decisions live in the project wiki (`../wiki`): `build-plan.md`,
+`architecture.md`, `stripe-integration.md`, `admin-dashboard.md`,
+`customer-portal.md`.
+
+## What's built
+
+| Surface | Routes | Notes |
+| --- | --- | --- |
+| Marketing + waitlist | `/`, `/subscribe` | Pre-launch waitlist; tier selection into Stripe Checkout |
+| Auth | `/login`, `/signup` | Email/password + Google, exchanged for an httpOnly session cookie |
+| Member portal | `/portal`, `/portal/box`, `/portal/favorites`, `/portal/orders`, `/portal/account` | Gated on an active subscription |
+| Lapsed members | `/portal-paused` | Read-only outstanding items + route back to billing |
+| Admin | `/admin`, `/admin/products`, `/admin/units`, `/admin/orders`, `/admin/members`, `/admin/waitlist` | Gated on `isAdmin` |
+| Jobs | `/api/cron/release-holds`, `/api/cron/return-reminders` | Driven by Cloud Scheduler |
 
 ## Local development
 
 ```bash
 npm install
-cp .env.example .env.local   # optional; the form works without any env vars
+cp .env.example .env.local
 npm run dev                  # http://localhost:3000
 ```
 
-With no environment variables set, signups are written to `.data/waitlist.json`
-so you can develop with zero external setup.
+The app degrades gracefully by design: with no environment variables the
+landing page and waitlist still work (signups go to `.data/waitlist.json`), the
+sign-in form explains what's missing, and portal/admin pages return a
+"not configured" message rather than crashing.
 
-## Configuration
+To work on the portal and admin you need, at minimum, a Firebase project with
+Firestore + Auth enabled and either `GOOGLE_APPLICATION_CREDENTIALS` or
+`FIREBASE_SERVICE_ACCOUNT` set locally, plus the `NEXT_PUBLIC_FIREBASE_*` web
+config values. Stripe is needed only for signup and billing flows.
 
-All brand copy, tiers, and steps live in [`src/lib/config.ts`](src/lib/config.ts).
-Environment variables are documented in [`.env.example`](.env.example):
+## Setup checklist
 
-| Variable | Purpose |
-| --- | --- |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Local only: path to a Firebase service account JSON (enables Firestore in dev). |
-| `FIREBASE_SERVICE_ACCOUNT` | Local only: service account JSON as a string (alternative to the path above). |
-| `FIREBASE_PROJECT_ID` | Firebase project id (local dev). |
-| `WAITLIST_COLLECTION` | Firestore collection name, defaults to `waitlist`. |
-| `RESEND_API_KEY` | Optional. Enables a confirmation email via Resend. |
-| `WAITLIST_FROM_EMAIL` | Optional. From address for the confirmation email. |
-| `NEXT_PUBLIC_SITE_URL` | Public site URL. |
+1. **Firebase project** — enable Firestore (Native mode), Authentication with
+   **Email/Password** and **Google**, and Storage if you want image uploads.
+2. **Firebase web config** — copy the `NEXT_PUBLIC_FIREBASE_*` values from
+   Project settings → Your apps into the environment.
+3. **Security rules** — `firebase deploy --only firestore:rules`. All Firestore
+   access goes through server code with the Admin SDK, so the rules deny every
+   client read and write.
+4. **Stripe** — create three monthly recurring prices (\$50 / \$90 / \$150) and
+   set `STRIPE_PRICE_ESSENTIAL`, `STRIPE_PRICE_SIGNATURE`,
+   `STRIPE_PRICE_PREMIER`, plus `STRIPE_SECRET_KEY`.
+5. **Stripe webhook** — point an endpoint at `/api/stripe/webhook` for
+   `checkout.session.completed`, `customer.subscription.*`,
+   `subscription_schedule.released`, `invoice.paid`, `invoice.payment_failed`,
+   and set `STRIPE_WEBHOOK_SECRET`. Locally:
+   `stripe listen --forward-to localhost:3000/api/stripe/webhook`.
+6. **Make yourself an admin** — sign up in the app, then in the Firestore
+   console set `isAdmin: true` on your `users/{uid}` document.
+7. **Scheduled jobs** — set `CRON_SECRET` and create two Cloud Scheduler jobs
+   that POST with an `x-cron-secret` header:
+   `/api/cron/release-holds` every 5 minutes and `/api/cron/return-reminders`
+   daily.
+8. **Email** — `RESEND_API_KEY` + `WAITLIST_FROM_EMAIL` for transactional mail;
+   `MAILCHIMP_API_KEY` + `MAILCHIMP_AUDIENCE_ID` for campaigns. Stripe sends
+   payment receipts on its own.
 
-On **Firebase App Hosting**, Firestore is accessed with the backend's own
-service account (Application Default Credentials), so no keys are needed in
-production.
+Every variable is documented in [`.env.example`](.env.example); production
+values are wired up in [`apphosting.yaml`](apphosting.yaml).
 
-## Waitlist flow
+## How the rental cycle works
 
-- `POST /api/waitlist` validates the email, checks the consent box and a bot
-  honeypot, stores the record (Firestore or local file), and optionally sends a
-  confirmation email.
-- The normalized email is used as the Firestore document id, so duplicates are
-  detected and returned as success ("you're already on the list").
+- **Serialized inventory.** A `product` is a style; a `unit` is one physical
+  garment with its own status (`available`, `reserved`, `out`, `cleaning`,
+  `retired`). Members browse styles, but a specific unit is what gets assigned.
+- **Reserve on add.** Adding a piece runs a Firestore transaction that claims an
+  available unit and creates a *hold* that expires after `HOLD_TTL_MINUTES`
+  (45 by default). A member's live holds are their box, and the tier limit is
+  enforced there — never in the browser.
+- **Confirm the box.** Confirming converts the holds into a `pick` (the monthly
+  rental order), moves the units to `out`, and emails the member. There's no
+  customer checkout for a pick: the subscription already covers it. One pick per
+  billing cycle, keyed off the Stripe period start.
+- **Returns.** Admin receives garments from the order screen (all or some);
+  they move to `cleaning`, then back to `available`. Overdue orders are flagged
+  and a late fee can be charged to the member's saved card via Stripe.
+- **Tier changes.** Upgrades apply immediately with proration; downgrades are
+  scheduled with a Stripe subscription schedule and take effect next cycle.
 
-## Email
+## Access control
 
-- **Confirmation** ("you're on the list") is transactional and sent from this
-  app via Resend (optional).
-- **Launch/marketing** email is handled later by Shopify Email/Messaging after
-  importing the waitlist into Shopify customers. Shopify cannot send the
-  transactional confirmation from this external page, which is why Resend is
-  used here. See `../wiki/landing-page-waitlist.md`.
+- Sign-in happens in the browser with the Firebase client SDK; the ID token is
+  immediately exchanged at `POST /api/auth/session` for a Firebase **session
+  cookie** (httpOnly). Every server page and route handler verifies that cookie
+  with `firebase-admin`, so no gating decision depends on client state.
+- `/portal/*` requires a signed-in member whose subscription status is `active`
+  or `trialing`, checked in `src/app/portal/layout.tsx` and again in every
+  `/api/portal/*` handler.
+- `/admin/*` requires `isAdmin: true` on the user's Firestore document, checked
+  in `src/app/admin/layout.tsx` and again in every `/api/admin/*` handler.
+
+## Project layout
+
+```
+src/app/            routes: marketing, auth, /portal, /admin, /api
+src/components/     UI; admin/ and portal/ subfolders
+src/lib/            config, session, billing, email, format
+src/lib/db/         Firestore data layer (users, subscriptions, products,
+                    units, holds, picks, favorites)
+```
+
+The data layer keeps queries to a single equality filter and refines in memory,
+so no composite Firestore indexes are needed at this catalogue size.
 
 ## Deployment (Firebase App Hosting + GitHub)
 
-Automatic deployments are handled by Firebase App Hosting's GitHub integration:
+1. Push the repo to GitHub.
+2. In the Firebase console create an **App Hosting** backend connected to the
+   repo (or run `firebase init apphosting`), with the app root set to `landing`.
+3. Every push to the connected branch triggers a rollout; pull requests can get
+   preview backends.
+4. Add secrets with `firebase apphosting:secrets:set <NAME>` and uncomment the
+   matching entries in [`apphosting.yaml`](apphosting.yaml). The
+   `NEXT_PUBLIC_FIREBASE_*` values must be available at **build** time.
 
-1. Push this repo to GitHub (see below).
-2. In the Firebase console, create an **App Hosting** backend and connect it to
-   the GitHub repo (or run `firebase init apphosting`).
-   - Set the app root to this folder (`landing`) if the repo contains more than
-     the app.
-   - App Hosting auto-detects Next.js and builds it.
-3. Every push to the connected branch (e.g. `main`) triggers a rollout;
-   pull requests can get preview backends.
-4. Runtime config lives in [`apphosting.yaml`](apphosting.yaml). Firestore needs
-   no secrets; to enable the confirmation email, add the Resend secret:
-   `firebase apphosting:secrets:set RESEND_API_KEY` and uncomment the `env`
-   block in `apphosting.yaml`.
-
-### Firestore setup
-
-1. Enable Firestore in the Firebase project (Native mode).
-2. Deploy the security rules (locks the collection to server-only access):
-   `firebase deploy --only firestore:rules`
-   (config in [`firebase.json`](firebase.json) / [`firestore.rules`](firestore.rules)).
-
-### Custom domain
-
-Add the domain to the App Hosting backend, then add the records it provides in
-your Shopify DNS panel. The store is not live yet, so the domain (or a
-subdomain) can point here now and be repointed to Shopify at full launch.
-
-### Push to GitHub
-
-```bash
-git add -A
-git commit -m "Firebase App Hosting + Firestore; rebrand to Bubbas Closet"
-# create a repo in the GitHub UI, then:
-git remote add origin git@github.com:<you>/bubbas-closet-landing.git
-git push -u origin main
-```
+Custom domain: add it in App Hosting, then create the DNS records at the
+registrar (Squarespace) — see `../wiki/landing-page-waitlist.md`.
 
 ## CI
 

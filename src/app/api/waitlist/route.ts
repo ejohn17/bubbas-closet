@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { normalizeEmail } from "@/lib/validation";
-import { addToWaitlist } from "@/lib/waitlist";
+import { addToWaitlist, markMailchimpSynced } from "@/lib/waitlist";
 import { sendWaitlistConfirmation } from "@/lib/email";
+import { subscribeToAudience } from "@/lib/mailchimp";
 
 export const runtime = "nodejs";
 
@@ -55,6 +56,12 @@ export async function POST(request: Request) {
 
   if (result.status === "added") {
     await sendWaitlistConfirmation(email);
+    // Keeps the Mailchimp audience current for the launch campaign. No-op
+    // until Mailchimp is configured; failures never block the signup.
+    const sync = await subscribeToAudience(email);
+    if (sync.status === "subscribed") {
+      await markMailchimpSynced(email);
+    }
   }
 
   return NextResponse.json({ ok: true, status: result.status });
