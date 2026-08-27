@@ -62,13 +62,13 @@ env:
     availability: [RUNTIME]
 
   - variable: STRIPE_PRICE_ESSENTIAL
-    value: "prod_V9A8pEutbDKeyH"
+    value: "price_1U8roAEOQUtgUmANVzVv82zb"
     availability: [RUNTIME]
   - variable: STRIPE_PRICE_SIGNATURE
-    value: "prod_V9A80SeKeRY0Gv"
+    value: "price_1U8rodEOQUtgUmANOvnxJyLZ"
     availability: [RUNTIME]
   - variable: STRIPE_PRICE_PREMIER
-    value: "prod_V9A98UtbENa3JK"
+    value: "price_1U8ropEOQUtgUmANQtSNkEqY"
     availability: [RUNTIME]
 
   # --- Transactional email (Resend) ---
