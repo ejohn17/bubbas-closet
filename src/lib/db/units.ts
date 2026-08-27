@@ -3,6 +3,7 @@ import { requireDb } from "@/lib/firebase-admin";
 import type { UnitCondition, UnitDoc, UnitStatus } from "@/lib/types";
 import { clean, COL, docTo, docsTo, DomainError, nowMs } from "@/lib/db/base";
 import { getProduct } from "@/lib/db/products";
+import { bestCondition, isRentableCondition } from "@/lib/rules";
 
 export async function getUnit(id: string): Promise<UnitDoc | null> {
   const snap = await requireDb().collection(COL.units).doc(id).get();
@@ -63,7 +64,11 @@ export async function createUnits(input: {
 }): Promise<UnitDoc[]> {
   const product = await getProduct(input.productId);
   if (!product) {
-    throw new DomainError("product_not_found", "That product no longer exists.", 404);
+    throw new DomainError(
+      "product_not_found",
+      "That product no longer exists.",
+      404,
+    );
   }
 
   const size = input.size?.trim();
@@ -71,7 +76,10 @@ export async function createUnits(input: {
 
   const quantity = Math.floor(input.quantity);
   if (!Number.isFinite(quantity) || quantity < 1 || quantity > 200) {
-    throw new DomainError("invalid_quantity", "Quantity must be between 1 and 200.");
+    throw new DomainError(
+      "invalid_quantity",
+      "Quantity must be between 1 and 200.",
+    );
   }
 
   const db = requireDb();
@@ -81,7 +89,8 @@ export async function createUnits(input: {
     .get();
   const startIndex = existing.size + 1;
   const prefix =
-    input.skuPrefix?.trim() || slugify(product.title).toUpperCase().slice(0, 12);
+    input.skuPrefix?.trim() ||
+    slugify(product.title).toUpperCase().slice(0, 12);
 
   const batch = db.batch();
   const ts = nowMs();
@@ -138,20 +147,32 @@ export async function updateUnit(
     const snap = await tx.get(ref);
     const unit = docTo<UnitDoc>(snap);
     if (!unit) {
-      throw new DomainError("unit_not_found", "That unit no longer exists.", 404);
+      throw new DomainError(
+        "unit_not_found",
+        "That unit no longer exists.",
+        404,
+      );
     }
+
+    // Grading a garment below the rentable range retires it, so it can never
+    // be offered to a member again without an explicit un-retire.
+    const condition = patch.condition ?? unit.condition;
+    const withheld = !isRentableCondition(condition);
+    const status =
+      withheld && unit.status !== "out" && unit.status !== "reserved"
+        ? "retired"
+        : patch.status;
 
     // A unit that is reserved or out can't be quietly flipped to available
     // without clearing the member link, so do both together.
     const clearsHolder =
-      patch.status !== undefined &&
-      patch.status !== "reserved" &&
-      patch.status !== "out";
+      status !== undefined && status !== "reserved" && status !== "out";
 
     tx.set(
       ref,
       clean({
         ...patch,
+        status,
         holderUid: clearsHolder ? null : undefined,
         holdId: clearsHolder ? null : undefined,
         holdExpiresAt: clearsHolder ? null : undefined,
@@ -163,13 +184,22 @@ export async function updateUnit(
   });
 }
 
+export type SizeAvailability = {
+  count: number;
+  /** Best condition on the shelf in this size — what the member will receive. */
+  condition: UnitCondition;
+};
+
 export type ProductAvailability = {
-  /** Available unit count per size. */
-  sizes: Record<string, number>;
+  sizes: Record<string, SizeAvailability>;
   total: number;
 };
 
-/** Available units grouped by product, for catalogue badges and filters. */
+/**
+ * Available units grouped by product, for catalogue badges and filters.
+ * Only rentable condition grades are counted, so a garment awaiting retirement
+ * never shows up as available to a member.
+ */
 export async function availabilityByProduct(): Promise<
   Record<string, ProductAvailability>
 > {
@@ -181,14 +211,24 @@ export async function availabilityByProduct(): Promise<
   const out: Record<string, ProductAvailability> = {};
   for (const doc of snap.docs) {
     const unit = doc.data() as UnitDoc;
+    if (!isRentableCondition(unit.condition)) continue;
+
     const entry = (out[unit.productId] ??= { sizes: {}, total: 0 });
-    entry.sizes[unit.size] = (entry.sizes[unit.size] ?? 0) + 1;
+    const size = entry.sizes[unit.size];
+    entry.sizes[unit.size] = size
+      ? {
+          count: size.count + 1,
+          condition: bestCondition(size.condition, unit.condition),
+        }
+      : { count: 1, condition: unit.condition };
     entry.total += 1;
   }
   return out;
 }
 
-export async function countUnitsByStatus(): Promise<Record<UnitStatus, number>> {
+export async function countUnitsByStatus(): Promise<
+  Record<UnitStatus, number>
+> {
   const snap = await requireDb().collection(COL.units).get();
   const counts: Record<UnitStatus, number> = {
     available: 0,

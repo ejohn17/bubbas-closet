@@ -3,6 +3,8 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ProductImage } from "@/components/ProductImage";
+import { bestCondition, conditionLabel } from "@/lib/rules";
+import type { UnitCondition } from "@/lib/types";
 
 export type CatalogItem = {
   id: string;
@@ -10,8 +12,8 @@ export type CatalogItem = {
   brand?: string;
   category?: string;
   image?: string;
-  /** Available unit count per size. */
-  sizes: { size: string; count: number }[];
+  /** Availability per size, with the condition the member would receive. */
+  sizes: { size: string; count: number; condition: UnitCondition }[];
   favorited: boolean;
   inBox: boolean;
 };
@@ -35,7 +37,8 @@ export function Catalog({
   const [, startTransition] = useTransition();
   const [search, setSearch] = useState("");
   const [sizeFilter, setSizeFilter] = useState<string>(
-    defaultSize && items.some((i) => i.sizes.some((s) => s.size === defaultSize))
+    defaultSize &&
+      items.some((i) => i.sizes.some((s) => s.size === defaultSize))
       ? defaultSize
       : "",
   );
@@ -52,13 +55,16 @@ export function Catalog({
   const allSizes = useMemo(() => {
     const set = new Set<string>();
     for (const item of items) for (const s of item.sizes) set.add(s.size);
-    return [...set].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    return [...set].sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true }),
+    );
   }, [items]);
 
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     return items.filter((item) => {
-      if (sizeFilter && !item.sizes.some((s) => s.size === sizeFilter)) return false;
+      if (sizeFilter && !item.sizes.some((s) => s.size === sizeFilter))
+        return false;
       if (!term) return true;
       return [item.title, item.brand, item.category]
         .filter(Boolean)
@@ -198,7 +204,9 @@ export function Catalog({
                     aria-pressed={isFavorite}
                     className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-card/90 text-base shadow-sm transition hover:scale-105"
                   >
-                    <span className={isFavorite ? "text-accent-dark" : "text-stone"}>
+                    <span
+                      className={isFavorite ? "text-accent-dark" : "text-stone"}
+                    >
                       {isFavorite ? "★" : "☆"}
                     </span>
                   </button>
@@ -210,19 +218,29 @@ export function Catalog({
                     <p className="mt-0.5 text-sm text-stone">{item.brand}</p>
                   ) : null}
 
+                  {item.sizes.length > 0 ? (
+                    <p className="mt-2 text-xs uppercase tracking-wider text-accent-dark">
+                      {conditionLabel(
+                        item.sizes
+                          .map((s) => s.condition)
+                          .reduce((a, b) => bestCondition(a, b)),
+                      )}
+                    </p>
+                  ) : null}
+
                   {isInBox ? (
                     <p className="mt-4 text-sm font-medium text-accent-dark">
                       In your box
                     </p>
                   ) : (
                     <div className="mt-4 flex flex-wrap gap-1.5">
-                      {item.sizes.map(({ size, count }) => (
+                      {item.sizes.map(({ size, count, condition }) => (
                         <button
                           key={size}
                           type="button"
                           disabled={full || busy !== null}
                           onClick={() => addToBox(item.id, size)}
-                          title={`${count} available in size ${size}`}
+                          title={`${count} available in size ${size} · ${conditionLabel(condition)}`}
                           className="btn-outline btn-sm"
                         >
                           {busy === `${item.id}:${size}` ? "Adding…" : size}

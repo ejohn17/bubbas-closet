@@ -1,10 +1,18 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import { BRAND } from "@/lib/config";
 import { getSessionUser } from "@/lib/session";
 import { SignOutButton } from "@/components/SignOutButton";
 
 /** Marketing / auth header. The portal and admin areas use their own nav. */
 export async function SiteHeader() {
+  // The header depends on who's asking, so any page using it must render per
+  // request. getSessionUser() alone isn't enough to signal that: it returns
+  // early without reading cookies when Firebase credentials are absent, which
+  // at build time would prerender a signed-out header into otherwise static
+  // pages like /terms.
+  await connection();
+
   const user = await getSessionUser();
 
   return (

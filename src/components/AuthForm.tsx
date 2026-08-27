@@ -90,7 +90,9 @@ export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
   if (!configured) {
     return (
       <div className="card p-6 text-sm text-stone">
-        <p className="font-medium text-ink">Sign-in isn&apos;t configured yet</p>
+        <p className="font-medium text-ink">
+          Sign-in isn&apos;t configured yet
+        </p>
         <p className="mt-2">
           Add the <code>NEXT_PUBLIC_FIREBASE_*</code> values from your Firebase
           web app config to the environment, then enable Email/Password and
@@ -136,9 +138,19 @@ export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
         </div>
 
         <div>
-          <label className="label" htmlFor="password">
-            Password
-          </label>
+          <div className="flex items-baseline justify-between">
+            <label className="label" htmlFor="password">
+              Password
+            </label>
+            {mode === "login" ? (
+              <Link
+                href="/reset-password"
+                className="mb-1.5 text-xs text-stone transition hover:text-ink"
+              >
+                Forgot your password?
+              </Link>
+            ) : null}
+          </div>
           <input
             id="password"
             type="password"
@@ -147,8 +159,12 @@ export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
             className="input"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            autoComplete={mode === "signup" ? "new-password" : "current-password"}
-            placeholder={mode === "signup" ? "At least 6 characters" : "••••••••"}
+            autoComplete={
+              mode === "signup" ? "new-password" : "current-password"
+            }
+            placeholder={
+              mode === "signup" ? "At least 6 characters" : "••••••••"
+            }
           />
         </div>
 
@@ -158,7 +174,25 @@ export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
           </p>
         ) : null}
 
-        <button type="submit" className="btn-primary" disabled={pending !== null}>
+        {mode === "signup" ? (
+          <p className="text-xs leading-relaxed text-stone">
+            By creating an account you agree to our{" "}
+            <Link href="/terms" className="link text-ink">
+              rental terms
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="link text-ink">
+              privacy policy
+            </Link>
+            .
+          </p>
+        ) : null}
+
+        <button
+          type="submit"
+          className="btn-primary"
+          disabled={pending !== null}
+        >
           {pending === "email"
             ? "One moment…"
             : mode === "signup"

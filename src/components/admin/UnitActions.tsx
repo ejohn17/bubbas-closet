@@ -3,13 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { UnitCondition, UnitStatus } from "@/lib/types";
-
-const CONDITIONS: UnitCondition[] = ["new", "excellent", "good", "fair"];
+import { CONDITION_ORDER, conditionAdminLabel } from "@/lib/rules";
 
 /**
  * Per-garment controls. `reserved` and `out` are set by the app itself (holds
  * and shipped orders), so they aren't offered here — returns are recorded from
- * the order instead.
+ * the order instead. Grading a garment below the rentable range retires it.
  */
 export function UnitActions({
   unitId,
@@ -52,15 +51,15 @@ export function UnitActions({
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
       <select
-        className="input w-32 px-3 py-1.5 text-xs"
+        className="input w-44 px-3 py-1.5 text-xs"
         value={condition}
         disabled={pending}
         aria-label="Condition"
         onChange={(e) => patch({ condition: e.target.value as UnitCondition })}
       >
-        {CONDITIONS.map((c) => (
+        {CONDITION_ORDER.map((c) => (
           <option key={c} value={c}>
-            {c}
+            {conditionAdminLabel(c)}
           </option>
         ))}
       </select>

@@ -18,6 +18,7 @@ import {
   tierForPriceId,
 } from "@/lib/tiers";
 import type { SubscriptionStatus } from "@/lib/types";
+import { RULES } from "@/lib/rules";
 import {
   customerIdOf,
   priceIdOf,
@@ -172,7 +173,6 @@ export async function chargeFee(input: {
   metadata?: Record<string, string>;
 }): Promise<{ invoiceId: string }> {
   const stripe = requireStripe();
-  const currency = process.env.STRIPE_CURRENCY || "usd";
 
   if (!Number.isFinite(input.amountCents) || input.amountCents < 50) {
     throw new DomainError("invalid_amount", "Fee must be at least $0.50.");
@@ -189,7 +189,7 @@ export async function chargeFee(input: {
   await stripe.invoiceItems.create({
     customer: input.stripeCustomerId,
     amount: Math.round(input.amountCents),
-    currency,
+    currency: RULES.currency,
     description: input.description,
     invoice: invoice.id,
   });

@@ -121,6 +121,8 @@ export type HoldDoc = {
   productId: string;
   productTitle: string;
   size: string;
+  /** Condition of the exact garment being held, shown to the member. */
+  condition?: UnitCondition;
   image?: string;
   createdAt: number;
   expiresAt: number;
@@ -139,6 +141,8 @@ export type PickItem = {
   productTitle: string;
   size: string;
   image?: string;
+  /** Condition when it shipped, for comparison against what comes back. */
+  condition?: UnitCondition;
   returnedAt?: number | null;
   returnCondition?: UnitCondition | null;
 };

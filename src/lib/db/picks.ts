@@ -10,6 +10,7 @@ import type {
   UnitDoc,
 } from "@/lib/types";
 import { clean, COL, docTo, docsTo, DomainError, nowMs } from "@/lib/db/base";
+import { isRentableCondition } from "@/lib/rules";
 
 /**
  * Picks are the monthly rental orders that replace the original Shopify $0
@@ -139,11 +140,12 @@ export async function confirmBox(input: {
       }
     });
 
-    const items: PickItem[] = holds.map((hold) => ({
+    const items: PickItem[] = holds.map((hold, index) => ({
       unitId: hold.unitId,
       productId: hold.productId,
       productTitle: hold.productTitle,
       size: hold.size,
+      condition: hold.condition ?? units[index]?.condition,
       image: hold.image,
       returnedAt: null,
       returnCondition: null,
@@ -257,12 +259,18 @@ export async function markReturned(
       { merge: true },
     );
 
+    // A garment graded below the rentable range on return is retired instead of
+    // being cleaned and re-listed (decisions C.6).
+    const retiring = input?.condition
+      ? !isRentableCondition(input.condition)
+      : false;
+
     unitSnaps.forEach((unitSnap, index) => {
       if (!unitSnap.exists) return;
       tx.set(
         unitRefs[index],
         clean({
-          status: "cleaning",
+          status: retiring ? "retired" : "cleaning",
           holderUid: null,
           pickId: null,
           condition: input?.condition,
@@ -298,7 +306,11 @@ export async function cancelPick(id: string): Promise<void> {
     );
     const unitSnaps = unitRefs.length ? await tx.getAll(...unitRefs) : [];
 
-    tx.set(pickRef, { status: "cancelled" satisfies PickStatus }, { merge: true });
+    tx.set(
+      pickRef,
+      { status: "cancelled" satisfies PickStatus },
+      { merge: true },
+    );
 
     unitSnaps.forEach((unitSnap, index) => {
       if (!unitSnap.exists) return;
@@ -341,7 +353,10 @@ export async function markReminderSent(
     .set({ [field]: nowMs() }, { merge: true });
 }
 
-export async function updatePickNotes(id: string, notes: string): Promise<void> {
+export async function updatePickNotes(
+  id: string,
+  notes: string,
+): Promise<void> {
   await requireDb()
     .collection(COL.picks)
     .doc(id)

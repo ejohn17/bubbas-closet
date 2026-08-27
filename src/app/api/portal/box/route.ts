@@ -14,7 +14,7 @@ export async function GET() {
   }
 }
 
-/** Add a piece — reserves a specific unit for HOLD_TTL_MINUTES. */
+/** Add a piece — reserves a specific unit for RULES.holdTtlMinutes. */
 export async function POST(request: Request) {
   try {
     const { user, entitlement } = await requireEntitledUser();

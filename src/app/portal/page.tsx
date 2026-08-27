@@ -42,7 +42,11 @@ export default async function PortalHome({
       category: product.category,
       image: product.images[0],
       sizes: Object.entries(sizes)
-        .map(([size, count]) => ({ size, count }))
+        .map(([size, info]) => ({
+          size,
+          count: info.count,
+          condition: info.condition,
+        }))
         .sort((a, b) =>
           a.size.localeCompare(b.size, undefined, { numeric: true }),
         ),

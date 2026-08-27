@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { WaitlistForm } from "@/components/WaitlistForm";
 import { SiteHeader } from "@/components/SiteHeader";
+import { SiteFooter } from "@/components/SiteFooter";
 import { BRAND, TIERS, STEPS } from "@/lib/config";
 
 export default function Home() {
@@ -94,8 +95,8 @@ export default function Home() {
             Be first in line
           </h2>
           <p className="mx-auto mt-2 max-w-md text-stone">
-            Join the waitlist and we&apos;ll let you know the moment
-            memberships open.
+            Join the waitlist and we&apos;ll let you know the moment memberships
+            open.
           </p>
           <div className="mx-auto mt-8 max-w-xl">
             <WaitlistForm source="footer" />
@@ -103,17 +104,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="mx-auto w-full max-w-6xl px-6 py-10 text-sm text-stone">
-        <div className="flex flex-col items-center justify-between gap-2 border-t border-line pt-6 sm:flex-row">
-          <span>
-            © {new Date().getFullYear()} {BRAND.name}
-          </span>
-          <a href={`mailto:${BRAND.contactEmail}`} className="hover:text-ink">
-            {BRAND.contactEmail}
-          </a>
-        </div>
-      </footer>
+      <SiteFooter />
     </main>
   );
 }

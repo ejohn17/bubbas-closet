@@ -1,8 +1,9 @@
 import { ok, toErrorResponse } from "@/lib/api";
-import { DomainError, returnGraceDays } from "@/lib/db/base";
+import { DomainError } from "@/lib/db/base";
 import { confirmBox } from "@/lib/db/picks";
 import { requireEntitledUser } from "@/lib/portal";
 import { sendPickConfirmation } from "@/lib/email";
+import { RULES } from "@/lib/rules";
 
 /**
  * Confirms the box for this billing cycle: holds become a pending pick order,
@@ -33,7 +34,7 @@ export async function POST() {
       tierId: sub.tierId,
       itemLimit: entitlement.itemLimit,
       shippingAddress: address,
-      dueAt: sub.currentPeriodEnd + returnGraceDays() * 24 * 60 * 60 * 1000,
+      dueAt: sub.currentPeriodEnd + RULES.returnGraceDays * 24 * 60 * 60 * 1000,
     });
 
     await sendPickConfirmation(pick);

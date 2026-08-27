@@ -22,13 +22,13 @@ Full plan and decisions live in the project wiki (`../wiki`): `build-plan.md`,
 | Lapsed members | `/portal-paused` | Read-only outstanding items + route back to billing |
 | Admin | `/admin`, `/admin/products`, `/admin/units`, `/admin/orders`, `/admin/members`, `/admin/waitlist` | Gated on `isAdmin` |
 | Jobs | `/api/cron/release-holds`, `/api/cron/return-reminders` | Driven by Cloud Scheduler |
+| Legal | `/terms`, `/privacy` | Draft copy pending review |
 
 ## Local development
 
 ```bash
 npm install
-cp .env.example .env.local
-npm run dev                  # http://localhost:3000
+npm run dev                  # http://localhost:3000, reads .env / .env.local
 ```
 
 The app degrades gracefully by design: with no environment variables the
@@ -68,8 +68,13 @@ config values. Stripe is needed only for signup and billing flows.
    `MAILCHIMP_API_KEY` + `MAILCHIMP_AUDIENCE_ID` for campaigns. Stripe sends
    payment receipts on its own.
 
-Every variable is documented in [`.env.example`](.env.example); production
-values are wired up in [`apphosting.yaml`](apphosting.yaml).
+Every variable is documented in [`.env`](.env); production values are wired up
+in [`apphosting.yaml`](apphosting.yaml).
+
+Business rules are **not** environment variables. Hold expiry, the return grace
+period, reminder timing, currency, and which condition grades are rentable live
+in [`src/lib/rules.ts`](src/lib/rules.ts); tier pricing and item limits live in
+[`src/lib/config.ts`](src/lib/config.ts).
 
 ## How the rental cycle works
 
@@ -77,9 +82,12 @@ values are wired up in [`apphosting.yaml`](apphosting.yaml).
   garment with its own status (`available`, `reserved`, `out`, `cleaning`,
   `retired`). Members browse styles, but a specific unit is what gets assigned.
 - **Reserve on add.** Adding a piece runs a Firestore transaction that claims an
-  available unit and creates a *hold* that expires after `HOLD_TTL_MINUTES`
-  (45 by default). A member's live holds are their box, and the tier limit is
-  enforced there — never in the browser.
+  available unit and creates a *hold* that expires after 45 minutes. A member's
+  live holds are their box, and the tier limit is enforced there — never in the
+  browser.
+- **Condition grades.** Only `new`, `excellent`, and `good` garments are offered;
+  the grade of the exact piece is shown in the member's box. A garment graded
+  `fair` — on return or by an admin — is retired instead of re-listed.
 - **Confirm the box.** Confirming converts the holds into a `pick` (the monthly
   rental order), moves the units to `out`, and emails the member. There's no
   customer checkout for a pick: the subscription already covers it. One pick per

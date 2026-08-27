@@ -4,11 +4,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ProductImage } from "@/components/ProductImage";
+import { conditionLabel } from "@/lib/rules";
+import type { UnitCondition } from "@/lib/types";
 
 export type BoxHold = {
   id: string;
   productTitle: string;
   size: string;
+  condition?: UnitCondition;
   image?: string;
   expiresAt: number;
 };
@@ -37,16 +40,23 @@ export function BoxSummary({
     return () => clearInterval(timer);
   }, []);
 
-  const soonest = items.length ? Math.min(...items.map((i) => i.expiresAt)) : null;
-  const minutesLeft = soonest ? Math.max(0, Math.round((soonest - now) / 60_000)) : null;
+  const soonest = items.length
+    ? Math.min(...items.map((i) => i.expiresAt))
+    : null;
+  const minutesLeft = soonest
+    ? Math.max(0, Math.round((soonest - now) / 60_000))
+    : null;
 
   async function remove(holdId: string) {
     setError(null);
     setPending(holdId);
     try {
-      const res = await fetch(`/api/portal/box?holdId=${encodeURIComponent(holdId)}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `/api/portal/box?holdId=${encodeURIComponent(holdId)}`,
+        {
+          method: "DELETE",
+        },
+      );
       const body = await res.json().catch(() => null);
       if (!res.ok || !body?.ok) {
         setError(body?.message ?? "Could not remove that piece.");
@@ -103,7 +113,10 @@ export function BoxSummary({
             />
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium">{item.productTitle}</p>
-              <p className="text-sm text-stone">Size {item.size}</p>
+              <p className="text-sm text-stone">
+                Size {item.size}
+                {item.condition ? ` · ${conditionLabel(item.condition)}` : ""}
+              </p>
             </div>
             <button
               type="button"

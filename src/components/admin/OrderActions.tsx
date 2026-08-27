@@ -4,8 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PickStatus, UnitCondition } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
-
-const CONDITIONS: UnitCondition[] = ["excellent", "good", "fair"];
+import { CONDITION_ORDER, conditionAdminLabel } from "@/lib/rules";
 
 export type OrderItem = {
   unitId: string;
@@ -146,11 +145,14 @@ export function OrderActions({
         </section>
       ) : null}
 
-      {outstanding.length > 0 && status !== "pending" && status !== "cancelled" ? (
+      {outstanding.length > 0 &&
+      status !== "pending" &&
+      status !== "cancelled" ? (
         <section className="card p-5">
           <h2 className="font-semibold">Receive returns</h2>
           <p className="mt-1 text-sm text-stone">
             Returned garments move to cleaning, then back into the closet.
+            Grading one below the rentable range retires it instead.
           </p>
 
           <ul className="mt-4 flex flex-col gap-2">
@@ -172,7 +174,7 @@ export function OrderActions({
           </ul>
 
           <div className="mt-5 flex flex-wrap items-end gap-3">
-            <div className="w-40">
+            <div className="w-52">
               <label className="label" htmlFor="return-condition">
                 Condition back
               </label>
@@ -182,9 +184,9 @@ export function OrderActions({
                 value={condition}
                 onChange={(e) => setCondition(e.target.value as UnitCondition)}
               >
-                {CONDITIONS.map((c) => (
+                {CONDITION_ORDER.map((c) => (
                   <option key={c} value={c}>
-                    {c}
+                    {conditionAdminLabel(c)}
                   </option>
                 ))}
               </select>
@@ -205,7 +207,9 @@ export function OrderActions({
                 }
               }}
             >
-              {pending === "return" ? "Saving…" : `Receive selected (${selected.size})`}
+              {pending === "return"
+                ? "Saving…"
+                : `Receive selected (${selected.size})`}
             </button>
 
             <button

@@ -75,7 +75,10 @@ export async function updateSizeProfile(
   await requireDb()
     .collection(COL.users)
     .doc(uid)
-    .set({ sizeProfile: clean(sizeProfile), updatedAt: nowMs() }, { merge: true });
+    .set(
+      { sizeProfile: clean(sizeProfile), updatedAt: nowMs() },
+      { merge: true },
+    );
 }
 
 export async function updateShippingAddress(

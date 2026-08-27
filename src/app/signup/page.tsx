@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AuthForm } from "@/components/AuthForm";
 import { SiteHeader } from "@/components/SiteHeader";
+import { SiteFooter } from "@/components/SiteFooter";
 import { BRAND } from "@/lib/config";
 import { getSessionUser } from "@/lib/session";
 import { safeNext } from "@/lib/redirects";
@@ -24,7 +25,7 @@ export default async function SignupPage({
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto w-full max-w-md px-6 pb-24 pt-8">
+      <main className="mx-auto w-full max-w-md flex-1 px-6 pb-24 pt-8">
         <h1 className="text-3xl font-semibold tracking-tight">
           Create your account
         </h1>
@@ -33,6 +34,7 @@ export default async function SignupPage({
         </p>
         <AuthForm mode="signup" next={destination} />
       </main>
+      <SiteFooter />
     </>
   );
 }

@@ -42,6 +42,7 @@ export default async function BoxPage() {
             id: h.id,
             productTitle: h.productTitle,
             size: h.size,
+            condition: h.condition,
             image: h.image,
             expiresAt: h.expiresAt,
           }))}

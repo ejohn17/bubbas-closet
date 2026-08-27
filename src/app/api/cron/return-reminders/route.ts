@@ -2,21 +2,21 @@ import { ok, toErrorResponse } from "@/lib/api";
 import { isOverdue, listPicks, markReminderSent } from "@/lib/db/picks";
 import { sendOverdueNotice, sendReturnReminder } from "@/lib/email";
 import { assertCronAuthorized } from "@/lib/cron";
+import { RULES } from "@/lib/rules";
 
 /**
  * Return reminders and overdue notices. Suggested schedule: daily.
  *
- * Reminders go out REMINDER_DAYS_BEFORE (default 3) days before the return due
- * date; an overdue notice follows once the date passes. Each is sent once per
- * order — late fees stay a manual call from the order screen.
+ * Reminders go out RULES.reminderDaysBefore days before the return due date;
+ * an overdue notice follows once the date passes. Each is sent once per order —
+ * late fees stay a manual call from the order screen.
  */
 export async function POST(request: Request) {
   try {
     await assertCronAuthorized(request);
 
-    const daysBefore = Number(process.env.REMINDER_DAYS_BEFORE) || 3;
     const at = Date.now();
-    const window = daysBefore * 24 * 60 * 60 * 1000;
+    const window = RULES.reminderDaysBefore * 24 * 60 * 60 * 1000;
 
     const picks = [
       ...(await listPicks({ status: "shipped" })),

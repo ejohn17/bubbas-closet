@@ -4,8 +4,8 @@ import { TIERS, type Tier } from "@/lib/config";
  * Tier <-> Stripe price mapping.
  *
  * Price ids live in env vars so the same code runs against Stripe test and
- * live mode. Item limits come from `config.ts` but can be overridden without a
- * code change via TIER_LIMITS (e.g. "essential:12,signature:24,premier:48").
+ * live mode. Pricing and item limits are product decisions and live in
+ * `config.ts`; other cycle rules live in `rules.ts`.
  */
 
 const PRICE_ENV: Record<string, string> = {
@@ -14,25 +14,11 @@ const PRICE_ENV: Record<string, string> = {
   premier: "STRIPE_PRICE_PREMIER",
 };
 
-function limitOverrides(): Record<string, number> {
-  const raw = process.env.TIER_LIMITS;
-  if (!raw) return {};
-  const out: Record<string, number> = {};
-  for (const part of raw.split(",")) {
-    const [id, value] = part.split(":");
-    const limit = Number(value);
-    if (id && Number.isFinite(limit) && limit > 0) out[id.trim()] = limit;
-  }
-  return out;
-}
-
 export function getTier(tierId: string): Tier | null {
   return TIERS.find((t) => t.id === tierId) ?? null;
 }
 
 export function itemLimitFor(tierId: string): number {
-  const overrides = limitOverrides();
-  if (overrides[tierId]) return overrides[tierId];
   return getTier(tierId)?.items ?? 0;
 }
 

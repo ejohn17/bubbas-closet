@@ -1,23 +1,16 @@
 import { requireDb } from "@/lib/firebase-admin";
 import type { HoldDoc, UnitDoc } from "@/lib/types";
-import {
-  clean,
-  COL,
-  docTo,
-  docsTo,
-  DomainError,
-  holdTtlMinutes,
-  nowMs,
-} from "@/lib/db/base";
+import { clean, COL, docTo, docsTo, DomainError, nowMs } from "@/lib/db/base";
 import { getProduct } from "@/lib/db/products";
+import { isRentableCondition, RULES } from "@/lib/rules";
 
 /**
  * Holds implement reserve-on-add: a member's live holds *are* their box.
  *
  * Reserving is done inside a Firestore transaction so two members can never
  * take the same physical garment, and the tier limit is enforced here rather
- * than in the UI. Holds expire after HOLD_TTL_MINUTES (45 by default) and are
- * swept by /api/cron/release-holds.
+ * than in the UI. Holds expire after RULES.holdTtlMinutes and are swept by
+ * /api/cron/release-holds.
  */
 
 function isLive(hold: HoldDoc, at: number): boolean {
@@ -43,7 +36,10 @@ export type BoxState = {
   expiresAt: number | null;
 };
 
-export async function getBox(uid: string, itemLimit: number): Promise<BoxState> {
+export async function getBox(
+  uid: string,
+  itemLimit: number,
+): Promise<BoxState> {
   const holds = await listHolds(uid);
   return {
     holds,
@@ -66,7 +62,11 @@ export async function addToBox(input: {
   const db = requireDb();
   const product = await getProduct(input.productId);
   if (!product || !product.active) {
-    throw new DomainError("product_unavailable", "That piece is no longer available.", 404);
+    throw new DomainError(
+      "product_unavailable",
+      "That piece is no longer available.",
+      404,
+    );
   }
 
   const candidates = await db
@@ -74,8 +74,12 @@ export async function addToBox(input: {
     .where("productId", "==", input.productId)
     .get();
 
+  // Garments below the rentable condition grades are withheld from members.
   const available = docsTo<UnitDoc>(candidates.docs).filter(
-    (u) => u.status === "available" && u.size === input.size,
+    (u) =>
+      u.status === "available" &&
+      u.size === input.size &&
+      isRentableCondition(u.condition),
   );
 
   if (!available.length) {
@@ -102,7 +106,11 @@ export async function addToBox(input: {
 
   throw (
     lastRaceError ??
-    new DomainError("size_unavailable", `Size ${input.size} is out on loan right now.`, 409)
+    new DomainError(
+      "size_unavailable",
+      `Size ${input.size} is out on loan right now.`,
+      409,
+    )
   );
 }
 
@@ -132,7 +140,9 @@ async function reserveUnit(input: {
       throw new DomainError("unit_taken", "That piece was just taken.", 409);
     }
 
-    const liveHolds = docsTo<HoldDoc>(holdsSnap.docs).filter((h) => isLive(h, at));
+    const liveHolds = docsTo<HoldDoc>(holdsSnap.docs).filter((h) =>
+      isLive(h, at),
+    );
 
     if (liveHolds.length >= input.itemLimit) {
       throw new DomainError(
@@ -142,10 +152,14 @@ async function reserveUnit(input: {
       );
     }
     if (liveHolds.some((h) => h.productId === input.product.id)) {
-      throw new DomainError("already_in_box", "That piece is already in your box.", 409);
+      throw new DomainError(
+        "already_in_box",
+        "That piece is already in your box.",
+        409,
+      );
     }
 
-    const expiresAt = at + holdTtlMinutes() * 60_000;
+    const expiresAt = at + RULES.holdTtlMinutes * 60_000;
     const hold: HoldDoc = {
       id: holdRef.id,
       uid: input.uid,
@@ -153,6 +167,7 @@ async function reserveUnit(input: {
       productId: unit.productId,
       productTitle: unit.productTitle,
       size: unit.size,
+      condition: unit.condition,
       image: input.product.images[0],
       createdAt: at,
       expiresAt,
@@ -175,7 +190,10 @@ async function reserveUnit(input: {
   });
 }
 
-export async function removeFromBox(uid: string, holdId: string): Promise<void> {
+export async function removeFromBox(
+  uid: string,
+  holdId: string,
+): Promise<void> {
   const db = requireDb();
   const holdRef = db.collection(COL.holds).doc(holdId);
 

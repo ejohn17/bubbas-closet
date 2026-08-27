@@ -104,7 +104,10 @@ export async function updateProduct(
     updatedAt: nowMs(),
   });
 
-  await requireDb().collection(COL.products).doc(id).set(patch, { merge: true });
+  await requireDb()
+    .collection(COL.products)
+    .doc(id)
+    .set(patch, { merge: true });
 }
 
 function normalizeList(value?: string[]): string[] {

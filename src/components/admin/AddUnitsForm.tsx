@@ -3,8 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { UnitCondition } from "@/lib/types";
+import { conditionAdminLabel, RULES } from "@/lib/rules";
 
-const CONDITIONS: UnitCondition[] = ["new", "excellent", "good", "fair"];
+// Only rentable grades here: stock added below that range would be retired
+// on the spot, which is never what you want when receiving inventory.
+const CONDITIONS: UnitCondition[] = [...RULES.rentableConditions];
 
 /** Adds physical garments for one size of a style. */
 export function AddUnitsForm({
@@ -106,7 +109,7 @@ export function AddUnitsForm({
         >
           {CONDITIONS.map((c) => (
             <option key={c} value={c}>
-              {c}
+              {conditionAdminLabel(c)}
             </option>
           ))}
         </select>

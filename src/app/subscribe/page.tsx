@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
+import { SiteFooter } from "@/components/SiteFooter";
 import { TierPicker, type TierOption } from "@/components/TierPicker";
 import { BRAND, STEPS, TIERS } from "@/lib/config";
 import { getSessionUser } from "@/lib/session";
@@ -33,7 +35,7 @@ export default async function SubscribePage({
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto w-full max-w-5xl px-6 pb-24 pt-6">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-6 pb-24 pt-6">
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
           Choose your membership
         </h1>
@@ -53,6 +55,15 @@ export default async function SubscribePage({
           <TierPicker tiers={tiers} signedIn={Boolean(user)} />
         </div>
 
+        <p className="mt-8 text-sm text-stone">
+          Memberships renew monthly and you can cancel any time from your
+          account. Returns, late fees, and damage are covered in our{" "}
+          <Link href="/terms" className="link text-ink">
+            rental terms
+          </Link>
+          .
+        </p>
+
         <section className="mt-20 border-t border-line pt-12">
           <h2 className="text-xl font-semibold tracking-tight">How it works</h2>
           <ol className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
@@ -68,6 +79,7 @@ export default async function SubscribePage({
           </ol>
         </section>
       </main>
+      <SiteFooter />
     </>
   );
 }

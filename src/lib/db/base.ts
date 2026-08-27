@@ -47,16 +47,6 @@ export function clean<T extends Record<string, unknown>>(obj: T): T {
   return out as T;
 }
 
-export function holdTtlMinutes(): number {
-  const raw = Number(process.env.HOLD_TTL_MINUTES);
-  return Number.isFinite(raw) && raw > 0 ? raw : 45;
-}
-
-export function returnGraceDays(): number {
-  const raw = Number(process.env.RETURN_GRACE_DAYS);
-  return Number.isFinite(raw) && raw >= 0 ? raw : 5;
-}
-
 export class DomainError extends Error {
   status: number;
   code: string;
