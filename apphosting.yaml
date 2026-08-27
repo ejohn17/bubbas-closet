@@ -23,52 +23,53 @@ runConfig:
 env:
   # --- Public site config ---
   - variable: NEXT_PUBLIC_SITE_URL
-    value: "https://REPLACE-with-your-app-hosting-domain"
+    value: "https://bubbas-closet-staging--bubbas-closet.us-east4.hosted.app/"
     availability:
       - BUILD
       - RUNTIME
 
   # --- Firebase web app config (client-side Auth) ---
-  # - variable: NEXT_PUBLIC_FIREBASE_API_KEY
-  #   value: ""
-  #   availability: [BUILD, RUNTIME]
-  # - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-  #   value: ""
-  #   availability: [BUILD, RUNTIME]
-  # - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-  #   value: ""
-  #   availability: [BUILD, RUNTIME]
-  # - variable: NEXT_PUBLIC_FIREBASE_APP_ID
-  #   value: ""
-  #   availability: [BUILD, RUNTIME]
-  # - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-  #   value: ""
-  #   availability: [BUILD, RUNTIME]
-  # - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-  #   value: ""
-  #   availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: "AIzaSyBEwYtYhOTRg3BVaItvCg71MT0irMBrHMY"
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: "bubbas-closet.firebaseapp.com"
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: "bubbas-closet"
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: "1:1064956216993:web:369b1b848f9bc592abd2e0"
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "1064956216993"
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: "bubbas-closet.firebasestorage.app"
+    availability: [BUILD, RUNTIME]
 
   # --- Product image uploads ---
-  # - variable: FIREBASE_STORAGE_BUCKET
-  #   value: "your-project.firebasestorage.app"
-  #   availability: [RUNTIME]
+  - variable: FIREBASE_STORAGE_BUCKET
+    value: "bubbas-closet.firebasestorage.app"
+    availability: [RUNTIME]
 
   # --- Stripe (secrets) ---
-  # - variable: STRIPE_SECRET_KEY
-  #   secret: STRIPE_SECRET_KEY
-  #   availability: [RUNTIME]
-  # - variable: STRIPE_WEBHOOK_SECRET
-  #   secret: STRIPE_WEBHOOK_SECRET
-  #   availability: [RUNTIME]
-  # - variable: STRIPE_PRICE_ESSENTIAL
-  #   value: "price_..."
-  #   availability: [RUNTIME]
-  # - variable: STRIPE_PRICE_SIGNATURE
-  #   value: "price_..."
-  #   availability: [RUNTIME]
-  # - variable: STRIPE_PRICE_PREMIER
-  #   value: "price_..."
-  #   availability: [RUNTIME]
+  - variable: STRIPE_SECRET_KEY
+    secret: STRIPE_SECRET_KEY
+    availability: [RUNTIME]
+  - variable: STRIPE_WEBHOOK_SECRET
+    secret: STRIPE_WEBHOOK_SECRET
+    availability: [RUNTIME]
+
+  - variable: STRIPE_PRICE_ESSENTIAL
+    value: "prod_V9A8pEutbDKeyH"
+    availability: [RUNTIME]
+  - variable: STRIPE_PRICE_SIGNATURE
+    value: "prod_V9A80SeKeRY0Gv"
+    availability: [RUNTIME]
+  - variable: STRIPE_PRICE_PREMIER
+    value: "prod_V9A98UtbENa3JK"
+    availability: [RUNTIME]
 
   # --- Transactional email (Resend) ---
   # - variable: RESEND_API_KEY
