@@ -1,0 +1,4 @@
+# Temporary: pnpm 11 defaults minimumReleaseAge to 1 day, which can fail
+# App Hosting builds when the lockfile pins a package published today.
+# Remove this once we no longer need to bypass that check.
+minimumReleaseAge: 0

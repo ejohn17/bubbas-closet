@@ -31,62 +31,63 @@ env:
   # --- Firebase web app config (client-side Auth) ---
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
     value: "AIzaSyBEwYtYhOTRg3BVaItvCg71MT0irMBrHMY"
-    availability: [BUILD, RUNTIME]
+    availability: [ BUILD, RUNTIME ]
   - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
     value: "bubbas-closet.firebaseapp.com"
-    availability: [BUILD, RUNTIME]
+    availability: [ BUILD, RUNTIME ]
   - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
     value: "bubbas-closet"
-    availability: [BUILD, RUNTIME]
+    availability: [ BUILD, RUNTIME ]
   - variable: NEXT_PUBLIC_FIREBASE_APP_ID
     value: "1:1064956216993:web:369b1b848f9bc592abd2e0"
-    availability: [BUILD, RUNTIME]
+    availability: [ BUILD, RUNTIME ]
   - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
     value: "1064956216993"
-    availability: [BUILD, RUNTIME]
+    availability: [ BUILD, RUNTIME ]
   - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
     value: "bubbas-closet.firebasestorage.app"
-    availability: [BUILD, RUNTIME]
+    availability: [ BUILD, RUNTIME ]
 
   # --- Product image uploads ---
   - variable: FIREBASE_STORAGE_BUCKET
     value: "bubbas-closet.firebasestorage.app"
-    availability: [RUNTIME]
+    availability: [ RUNTIME ]
 
   # --- Stripe (secrets) ---
   - variable: STRIPE_SECRET_KEY
     secret: STRIPE_SECRET_KEY
-    availability: [RUNTIME]
+    availability: [ RUNTIME ]
   - variable: STRIPE_WEBHOOK_SECRET
     secret: STRIPE_WEBHOOK_SECRET
-    availability: [RUNTIME]
+    availability: [ RUNTIME ]
 
   - variable: STRIPE_PRICE_ESSENTIAL
     value: "price_1U8roAEOQUtgUmANVzVv82zb"
-    availability: [RUNTIME]
+    availability: [ RUNTIME ]
   - variable: STRIPE_PRICE_SIGNATURE
     value: "price_1U8rodEOQUtgUmANOvnxJyLZ"
-    availability: [RUNTIME]
+    availability: [ RUNTIME ]
   - variable: STRIPE_PRICE_PREMIER
     value: "price_1U8ropEOQUtgUmANQtSNkEqY"
-    availability: [RUNTIME]
+    availability: [ RUNTIME ]
 
   # --- Transactional email (Resend) ---
   - variable: RESEND_API_KEY
     secret: RESEND_API_KEY
-    availability: [RUNTIME]
+    availability: [ RUNTIME ]
   - variable: WAITLIST_FROM_EMAIL
     value: "Bubbas Closet <hello@bubbascloset.com>"
-    availability: [RUNTIME]
+    availability: [ RUNTIME ]
 
   # --- Mailchimp campaigns ---
   - variable: MAILCHIMP_API_KEY
     secret: MAILCHIMP_API_KEY
-    availability: [RUNTIME]
+    availability: [ RUNTIME ]
   - variable: MAILCHIMP_AUDIENCE_ID
     value: "ea9d782d76"
-    availability: [RUNTIME]
-
+    availability: [ RUNTIME ]
+  - variable: CRON_SECRET
+    secret: CRON_SECRET
   # --- Scheduled jobs (Cloud Scheduler calls /api/cron/*) ---
   # - variable: CRON_SECRET
   #   secret: CRON_SECRET
