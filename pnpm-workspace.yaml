@@ -2,3 +2,11 @@
 # App Hosting builds when the lockfile pins a package published today.
 # Remove this once we no longer need to bypass that check.
 minimumReleaseAge: 0
+
+# pnpm 11 defaults strictDepBuilds to true, so CI fails unless these
+# packages are explicitly allowed to run their install scripts.
+allowBuilds:
+  "@firebase/util": true
+  protobufjs: true
+  unrs-resolver: true
+
