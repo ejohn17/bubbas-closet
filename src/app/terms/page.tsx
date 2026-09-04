@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
-import { SiteFooter } from "@/components/SiteFooter";
 import { BRAND, TIERS } from "@/lib/config";
 import { RULES } from "@/lib/rules";
 
@@ -184,8 +183,6 @@ export default function TermsPage() {
           </p>
         </div>
       </main>
-
-      <SiteFooter />
     </>
   );
 }

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { BRAND } from "@/lib/config";
 
-/** Footer for public pages. Legal links here are also what Stripe expects. */
+/** Site-wide footer so every surface, including portal and admin, links to legal pages. */
 export function SiteFooter() {
   return (
     <footer className="mx-auto w-full max-w-6xl px-6 py-10 text-sm text-stone">

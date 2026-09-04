@@ -140,6 +140,8 @@ export type PickItem = {
   productId: string;
   productTitle: string;
   size: string;
+  /** Denormalized so a returned garment can be matched without an extra unit read. */
+  sku?: string;
   image?: string;
   /** Condition when it shipped, for comparison against what comes back. */
   condition?: UnitCondition;

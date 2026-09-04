@@ -32,7 +32,7 @@ export default async function PortalLayout({
   const tier = getTier(entitlement.subscription?.tierId ?? "");
 
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="flex flex-1 flex-col">
       <header className="border-b border-line bg-card/70">
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-5">
           <div className="flex items-center gap-6">

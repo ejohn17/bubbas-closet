@@ -11,6 +11,7 @@ import type {
 } from "@/lib/types";
 import { clean, COL, docTo, docsTo, DomainError, nowMs } from "@/lib/db/base";
 import { isRentableCondition } from "@/lib/rules";
+import { listUnits } from "@/lib/db/units";
 
 /**
  * Picks are the monthly rental orders that replace the original Shopify $0
@@ -28,6 +29,7 @@ export async function listPicks(options?: {
   uid?: string;
   status?: PickStatus;
   overdueOnly?: boolean;
+  search?: string;
 }): Promise<PickDoc[]> {
   const db = requireDb();
   const base: Query = db.collection(COL.picks);
@@ -47,8 +49,63 @@ export async function listPicks(options?: {
     const at = nowMs();
     picks = picks.filter((p) => isOverdue(p, at));
   }
+  if (options?.search?.trim()) {
+    picks = await filterPicksBySearch(picks, options.search);
+  }
 
   return picks.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+/** Fields a warehouse desk can type from a return package or a garment tag. */
+function pickSearchText(pick: PickDoc): string {
+  const address = pick.shippingAddress;
+  return [
+    pick.id,
+    pick.email,
+    pick.uid,
+    pick.trackingNumber,
+    pick.carrier,
+    address?.name,
+    address?.line1,
+    address?.line2,
+    address?.city,
+    address?.region,
+    address?.postalCode,
+    ...pick.items.flatMap((item) => [
+      item.productTitle,
+      item.unitId,
+      item.sku,
+      item.size,
+    ]),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+async function filterPicksBySearch(
+  picks: PickDoc[],
+  search: string,
+): Promise<PickDoc[]> {
+  const query = search.trim().toLowerCase();
+  if (!query) return picks;
+
+  // SKU / unit-id lookups go through inventory so older picks (no denormalized
+  // sku on the line) and garments still marked `out` still resolve to an order.
+  const units = await listUnits({ search });
+  const unitIds = new Set(units.map((unit) => unit.id));
+  const pickIds = new Set(
+    units
+      .map((unit) => unit.pickId)
+      .filter((id): id is string => Boolean(id)),
+  );
+
+  return picks.filter(
+    (pick) =>
+      pickIds.has(pick.id) ||
+      pick.items.some((item) => unitIds.has(item.unitId)) ||
+      pickSearchText(pick).includes(query),
+  );
 }
 
 export function isOverdue(pick: PickDoc, at = nowMs()): boolean {
@@ -145,6 +202,7 @@ export async function confirmBox(input: {
       productId: hold.productId,
       productTitle: hold.productTitle,
       size: hold.size,
+      sku: units[index]?.sku,
       condition: hold.condition ?? units[index]?.condition,
       image: hold.image,
       returnedAt: null,

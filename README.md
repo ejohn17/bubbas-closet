@@ -16,7 +16,7 @@ Full plan and decisions live in the project wiki (`../wiki`): `build-plan.md`,
 
 | Surface | Routes | Notes |
 | --- | --- | --- |
-| Marketing + waitlist | `/`, `/subscribe` | Pre-launch waitlist; tier selection into Stripe Checkout |
+| Marketing | `/`, `/subscribe` | Tiers and how-it-works; Stripe Checkout from `/subscribe` |
 | Auth | `/login`, `/signup` | Email/password + Google, exchanged for an httpOnly session cookie |
 | Member portal | `/portal`, `/portal/box`, `/portal/favorites`, `/portal/orders`, `/portal/account` | Gated on an active subscription |
 | Lapsed members | `/portal-paused` | Read-only outstanding items + route back to billing |
@@ -32,9 +32,8 @@ npm run dev                  # http://localhost:3000, reads .env / .env.local
 ```
 
 The app degrades gracefully by design: with no environment variables the
-landing page and waitlist still work (signups go to `.data/waitlist.json`), the
-sign-in form explains what's missing, and portal/admin pages return a
-"not configured" message rather than crashing.
+marketing page still renders, the sign-in form explains what's missing, and
+portal/admin pages return a "not configured" message rather than crashing.
 
 To work on the portal and admin you need, at minimum, a Firebase project with
 Firestore + Auth enabled and either `GOOGLE_APPLICATION_CREDENTIALS` or

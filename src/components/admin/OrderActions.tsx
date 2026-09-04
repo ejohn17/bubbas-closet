@@ -10,6 +10,7 @@ export type OrderItem = {
   unitId: string;
   productTitle: string;
   size: string;
+  sku?: string;
   returnedAt?: number | null;
 };
 
@@ -166,7 +167,10 @@ export function OrderActions({
                   />
                   <span>
                     {item.productTitle}{" "}
-                    <span className="text-stone">size {item.size}</span>
+                    <span className="text-stone">
+                      size {item.size}
+                      {item.sku ? ` · ${item.sku}` : ""}
+                    </span>
                   </span>
                 </label>
               </li>

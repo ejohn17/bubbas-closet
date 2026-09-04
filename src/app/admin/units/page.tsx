@@ -41,6 +41,7 @@ export default async function AdminUnits({
         <FilterTabs
           basePath="/admin/units"
           current={active}
+          extraParams={{ search: search || undefined }}
           options={[
             { value: "", label: "All", count: total },
             ...STATUSES.map((s) => ({

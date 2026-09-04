@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
-import { SiteFooter } from "@/components/SiteFooter";
 import { TierPicker, type TierOption } from "@/components/TierPicker";
 import { BRAND, STEPS, TIERS } from "@/lib/config";
 import { getSessionUser } from "@/lib/session";
@@ -79,7 +78,6 @@ export default async function SubscribePage({
           </ol>
         </section>
       </main>
-      <SiteFooter />
     </>
   );
 }

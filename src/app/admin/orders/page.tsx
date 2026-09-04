@@ -2,6 +2,7 @@ import Link from "next/link";
 import { isOverdue, listPicks } from "@/lib/db/picks";
 import { StatusPill } from "@/components/StatusPill";
 import { FilterTabs } from "@/components/admin/FilterTabs";
+import { AdminSearch } from "@/components/admin/AdminSearch";
 import { dueLabel, formatDate } from "@/lib/format";
 import type { PickStatus } from "@/lib/types";
 
@@ -16,11 +17,12 @@ const STATUSES: PickStatus[] = [
 export default async function AdminOrders({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; search?: string }>;
 }) {
-  const { status } = await searchParams;
+  const { status, search } = await searchParams;
   const filter = status ?? "";
-  const all = await listPicks();
+  const query = search?.trim() ?? "";
+  const all = await listPicks({ search: query || undefined });
 
   const picks =
     filter === "overdue"
@@ -39,13 +41,15 @@ export default async function AdminOrders({
     <div>
       <h1 className="text-3xl font-semibold tracking-tight">Orders</h1>
       <p className="mt-2 text-stone">
-        Monthly boxes to pack, ship, and receive back.
+        Monthly boxes to pack, ship, and receive back. Search a return by
+        member, tracking, or garment SKU.
       </p>
 
-      <div className="mt-6">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
         <FilterTabs
           basePath="/admin/orders"
           current={filter}
+          extraParams={{ search: query || undefined }}
           options={[
             { value: "", label: "All", count: all.length },
             { value: "pending", label: "To pack", count: counts.pending },
@@ -59,17 +63,26 @@ export default async function AdminOrders({
             { value: "returned", label: "Complete", count: counts.returned },
           ]}
         />
+        <div className="w-full max-w-sm">
+          <AdminSearch
+            placeholder="Name, email, tracking, or SKU"
+            defaultValue={query}
+          />
+        </div>
       </div>
 
       {picks.length === 0 ? (
         <p className="card mt-8 p-8 text-center text-stone">
-          No orders in this view.
+          {query
+            ? "No orders match that search."
+            : "No orders in this view."}
         </p>
       ) : (
         <ul className="card mt-8 divide-y divide-line">
           {picks.map((pick) => {
             const outstanding = pick.items.filter((i) => !i.returnedAt).length;
             const late = isOverdue(pick);
+            const who = pick.shippingAddress?.name ?? pick.email ?? "Member";
 
             return (
               <li key={pick.id}>
@@ -78,12 +91,16 @@ export default async function AdminOrders({
                   className="flex flex-wrap items-center justify-between gap-3 p-4 transition hover:bg-cream/60"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">
-                      {pick.shippingAddress?.name ?? pick.email ?? "Member"}
-                    </p>
-                    <p className="mt-0.5 text-sm text-stone">
+                    <p className="truncate font-medium">{who}</p>
+                    <p className="mt-0.5 truncate text-sm text-stone">
+                      {pick.email && pick.shippingAddress?.name
+                        ? `${pick.email} · `
+                        : ""}
                       {pick.items.length} items · confirmed{" "}
                       {formatDate(pick.createdAt)}
+                      {pick.trackingNumber
+                        ? ` · ${pick.trackingNumber}`
+                        : ""}
                       {outstanding > 0 && pick.status !== "pending"
                         ? ` · ${outstanding} outstanding`
                         : ""}

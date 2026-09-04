@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
-import { SiteFooter } from "@/components/SiteFooter";
 import { BRAND } from "@/lib/config";
 
 /**
@@ -181,8 +180,6 @@ export default function PrivacyPage() {
           </p>
         </div>
       </main>
-
-      <SiteFooter />
     </>
   );
 }

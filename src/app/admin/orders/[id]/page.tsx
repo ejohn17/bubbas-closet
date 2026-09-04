@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPick, isOverdue } from "@/lib/db/picks";
+import { getUnit } from "@/lib/db/units";
 import { getUser } from "@/lib/db/users";
 import { getPrimarySubscription } from "@/lib/db/subscriptions";
 import { getTier } from "@/lib/tiers";
@@ -18,10 +19,16 @@ export default async function AdminOrderDetail({
   const pick = await getPick(id);
   if (!pick) notFound();
 
-  const [member, subscription] = await Promise.all([
+  const [member, subscription, units] = await Promise.all([
     getUser(pick.uid),
     getPrimarySubscription(pick.uid),
+    Promise.all(pick.items.map((item) => getUnit(item.unitId))),
   ]);
+  const skuByUnit = new Map(
+    units
+      .filter((unit): unit is NonNullable<typeof unit> => Boolean(unit))
+      .map((unit) => [unit.id, unit.sku]),
+  );
   const tier = getTier(pick.tierId);
   const address = pick.shippingAddress;
   const late = isOverdue(pick);
@@ -65,7 +72,10 @@ export default async function AdminOrderDetail({
                       {item.productTitle}
                     </p>
                     <p className="mt-0.5 text-xs text-stone">
-                      Size {item.size} · unit {item.unitId.slice(0, 6)}
+                      Size {item.size} ·{" "}
+                      {item.sku ??
+                        skuByUnit.get(item.unitId) ??
+                        `unit ${item.unitId.slice(0, 6)}`}
                     </p>
                   </div>
                   <span className="text-xs text-stone">
@@ -85,6 +95,7 @@ export default async function AdminOrderDetail({
               unitId: item.unitId,
               productTitle: item.productTitle,
               size: item.size,
+              sku: item.sku ?? skuByUnit.get(item.unitId),
               returnedAt: item.returnedAt ?? null,
             }))}
             carrier={pick.carrier}
@@ -129,6 +140,15 @@ export default async function AdminOrderDetail({
                 <dt>Shipped</dt>
                 <dd>{formatDate(pick.shippedAt)}</dd>
               </div>
+              {pick.trackingNumber ? (
+                <div className="flex justify-between gap-3">
+                  <dt>Tracking</dt>
+                  <dd className="truncate text-right">
+                    {pick.carrier ? `${pick.carrier} ` : ""}
+                    {pick.trackingNumber}
+                  </dd>
+                </div>
+              ) : null}
               <div className="flex justify-between gap-3">
                 <dt>Return due</dt>
                 <dd>{formatDate(pick.dueAt)}</dd>

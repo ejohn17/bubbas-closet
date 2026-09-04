@@ -64,7 +64,10 @@ export default async function AdminMembers() {
                   </span>
                   {outstanding > 0 ? (
                     <Link
-                      href="/admin/orders?status=shipped"
+                      href={`/admin/orders?${new URLSearchParams({
+                        status: "shipped",
+                        ...(member?.email ? { search: member.email } : {}),
+                      }).toString()}`}
                       className="link text-stone"
                     >
                       {outstanding} out

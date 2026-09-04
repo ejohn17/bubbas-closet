@@ -1,30 +1,39 @@
 import Link from "next/link";
-import { WaitlistForm } from "@/components/WaitlistForm";
 import { SiteHeader } from "@/components/SiteHeader";
-import { SiteFooter } from "@/components/SiteFooter";
 import { BRAND, TIERS, STEPS } from "@/lib/config";
+import { getSessionUser } from "@/lib/session";
 
-export default function Home() {
+export default async function Home() {
+  const user = await getSessionUser();
+
   return (
-    <main className="flex flex-col">
+    <main className="flex flex-1 flex-col">
       <SiteHeader />
 
-      {/* Hero */}
       <section className="mx-auto w-full max-w-6xl px-6 pb-16 pt-10 sm:pt-16">
-        <p className="mb-4 text-sm font-medium uppercase tracking-widest text-accent-dark">
-          Coming soon
-        </p>
         <h1 className="max-w-3xl text-4xl font-semibold leading-tight tracking-tight sm:text-6xl">
           {BRAND.tagline}.
         </h1>
         <p className="mt-5 max-w-xl text-lg text-stone">{BRAND.description}</p>
 
-        <div id="waitlist" className="mt-8 max-w-xl scroll-mt-24">
-          <WaitlistForm source="hero" />
+        <div className="mt-8 flex flex-wrap items-center gap-3">
+          {user ? (
+            <Link href="/portal" className="btn-primary">
+              Go to my closet
+            </Link>
+          ) : (
+            <>
+              <Link href="/subscribe" className="btn-primary">
+                Become a member
+              </Link>
+              <Link href="/login" className="btn-outline">
+                Sign in
+              </Link>
+            </>
+          )}
         </div>
       </section>
 
-      {/* Tiers */}
       <section className="border-y border-line bg-card/60">
         <div className="mx-auto w-full max-w-6xl px-6 py-16">
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
@@ -70,7 +79,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* How it works */}
       <section className="mx-auto w-full max-w-6xl px-6 py-16">
         <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
           How it works
@@ -88,23 +96,42 @@ export default function Home() {
         </ol>
       </section>
 
-      {/* Closing CTA */}
       <section className="border-t border-line bg-card/60">
         <div className="mx-auto w-full max-w-2xl px-6 py-16 text-center">
-          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Be first in line
-          </h2>
-          <p className="mx-auto mt-2 max-w-md text-stone">
-            Join the waitlist and we&apos;ll let you know the moment memberships
-            open.
-          </p>
-          <div className="mx-auto mt-8 max-w-xl">
-            <WaitlistForm source="footer" />
-          </div>
+          {user ? (
+            <>
+              <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                Your closet is waiting
+              </h2>
+              <p className="mx-auto mt-2 max-w-md text-stone">
+                Pick this month&apos;s pieces, check what&apos;s out with you, or
+                manage your membership.
+              </p>
+              <Link href="/portal" className="btn-primary mt-8">
+                Go to my closet
+              </Link>
+            </>
+          ) : (
+            <>
+              <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                Ready for a rotating wardrobe?
+              </h2>
+              <p className="mx-auto mt-2 max-w-md text-stone">
+                Pick a plan, build your first box, and swap for something new
+                next month.
+              </p>
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                <Link href="/subscribe" className="btn-primary">
+                  Become a member
+                </Link>
+                <Link href="/login" className="btn-outline">
+                  Sign in
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       </section>
-
-      <SiteFooter />
     </main>
   );
 }

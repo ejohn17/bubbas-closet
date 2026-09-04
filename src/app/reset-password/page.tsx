@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/SiteHeader";
-import { SiteFooter } from "@/components/SiteFooter";
 import { ResetPasswordForm } from "@/components/ResetPasswordForm";
 import { BRAND } from "@/lib/config";
 
@@ -21,7 +20,6 @@ export default function ResetPasswordPage() {
         </p>
         <ResetPasswordForm />
       </main>
-      <SiteFooter />
     </>
   );
 }

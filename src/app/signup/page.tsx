@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AuthForm } from "@/components/AuthForm";
 import { SiteHeader } from "@/components/SiteHeader";
-import { SiteFooter } from "@/components/SiteFooter";
 import { BRAND } from "@/lib/config";
 import { getSessionUser } from "@/lib/session";
 import { safeNext } from "@/lib/redirects";
@@ -34,7 +33,6 @@ export default async function SignupPage({
         </p>
         <AuthForm mode="signup" next={destination} />
       </main>
-      <SiteFooter />
     </>
   );
 }

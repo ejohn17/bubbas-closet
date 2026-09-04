@@ -72,20 +72,20 @@ env:
     availability: [RUNTIME]
 
   # --- Transactional email (Resend) ---
-  # - variable: RESEND_API_KEY
-  #   secret: RESEND_API_KEY
-  #   availability: [RUNTIME]
-  # - variable: WAITLIST_FROM_EMAIL
-  #   value: "Bubbas Closet <hello@bubbascloset.com>"
-  #   availability: [RUNTIME]
+  - variable: RESEND_API_KEY
+    secret: RESEND_API_KEY
+    availability: [RUNTIME]
+  - variable: WAITLIST_FROM_EMAIL
+    value: "Bubbas Closet <hello@bubbascloset.com>"
+    availability: [RUNTIME]
 
   # --- Mailchimp campaigns ---
-  # - variable: MAILCHIMP_API_KEY
-  #   secret: MAILCHIMP_API_KEY
-  #   availability: [RUNTIME]
-  # - variable: MAILCHIMP_AUDIENCE_ID
-  #   value: ""
-  #   availability: [RUNTIME]
+  - variable: MAILCHIMP_API_KEY
+    secret: MAILCHIMP_API_KEY
+    availability: [RUNTIME]
+  - variable: MAILCHIMP_AUDIENCE_ID
+    value: "ea9d782d76"
+    availability: [RUNTIME]
 
   # --- Scheduled jobs (Cloud Scheduler calls /api/cron/*) ---
   # - variable: CRON_SECRET

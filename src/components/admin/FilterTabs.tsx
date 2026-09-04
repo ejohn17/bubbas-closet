@@ -12,19 +12,25 @@ export function FilterTabs({
   param = "status",
   options,
   current,
+  extraParams,
 }: {
   basePath: string;
   param?: string;
   options: FilterOption[];
   current: string;
+  extraParams?: Record<string, string | undefined>;
 }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {options.map((option) => {
         const active = option.value === current;
-        const href = option.value
-          ? `${basePath}?${param}=${encodeURIComponent(option.value)}`
-          : basePath;
+        const query = new URLSearchParams();
+        if (option.value) query.set(param, option.value);
+        for (const [key, value] of Object.entries(extraParams ?? {})) {
+          if (value) query.set(key, value);
+        }
+        const encoded = query.toString();
+        const href = encoded ? `${basePath}?${encoded}` : basePath;
 
         return (
           <Link
