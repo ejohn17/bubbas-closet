@@ -165,6 +165,8 @@ export type PickDoc = {
   /** When the member is expected to have returned everything. */
   dueAt?: number | null;
   feeCents?: number;
+  /** Outbound label cost billed at ship time; 0 when the tier includes shipping. */
+  shippingCents?: number;
   notes?: string;
   createdAt: number;
   shippedAt?: number | null;

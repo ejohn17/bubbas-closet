@@ -183,12 +183,13 @@ export async function changeTier(input: {
   return { applied: "scheduled" };
 }
 
-/** One-off late or damage fee charged to the member's saved payment method. */
+/** One-off late, damage, or shipping charge on the member's saved payment method. */
 export async function chargeFee(input: {
   stripeCustomerId: string;
   amountCents: number;
   description: string;
   metadata?: Record<string, string>;
+  idempotencyKey?: string;
 }): Promise<{ invoiceId: string }> {
   const stripe = requireStripe();
 
@@ -196,24 +197,35 @@ export async function chargeFee(input: {
     throw new DomainError("invalid_amount", "Fee must be at least $0.50.");
   }
 
-  const invoice = await stripe.invoices.create({
-    customer: input.stripeCustomerId,
-    collection_method: "charge_automatically",
-    auto_advance: true,
-    description: input.description,
-    metadata: input.metadata,
-  });
+  const opts = (suffix: string) =>
+    input.idempotencyKey
+      ? { idempotencyKey: `${input.idempotencyKey}${suffix}` }
+      : undefined;
 
-  await stripe.invoiceItems.create({
-    customer: input.stripeCustomerId,
-    amount: Math.round(input.amountCents),
-    currency: RULES.currency,
-    description: input.description,
-    invoice: invoice.id,
-  });
+  const invoice = await stripe.invoices.create(
+    {
+      customer: input.stripeCustomerId,
+      collection_method: "charge_automatically",
+      auto_advance: true,
+      description: input.description,
+      metadata: input.metadata,
+    },
+    opts(""),
+  );
+
+  await stripe.invoiceItems.create(
+    {
+      customer: input.stripeCustomerId,
+      amount: Math.round(input.amountCents),
+      currency: RULES.currency,
+      description: input.description,
+      invoice: invoice.id,
+    },
+    opts("-item"),
+  );
 
   if (invoice.id) {
-    await stripe.invoices.finalizeInvoice(invoice.id);
+    await stripe.invoices.finalizeInvoice(invoice.id, undefined, opts("-finalize"));
   }
 
   return { invoiceId: invoice.id ?? "" };

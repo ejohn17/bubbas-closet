@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { shippingNoteForTier } from "@/lib/rules";
+import { outboundShippingShortNote, shippingNoteForTier } from "@/lib/rules";
 
 export type TierOption = {
   id: string;
@@ -123,6 +123,8 @@ export function TierPicker({
               <p className="mt-3 text-sm text-stone">{tier.blurb}</p>
               <p className="mt-2 text-xs font-medium text-stone">
                 {shippingNoteForTier(tier.id)}
+                {" · "}
+                {outboundShippingShortNote(tier.id)}
               </p>
 
               {!tier.available ? (
@@ -169,7 +171,7 @@ export function TierPicker({
         <p className="text-sm text-stone">
           {mode === "change"
             ? "Upgrades start now; downgrades begin next cycle."
-            : "Cancel anytime. Shipping is included both ways."}
+            : "Cancel anytime. Return shipping is included; outbound shipping is billed at cost except on Premier."}
         </p>
       </div>
     </div>

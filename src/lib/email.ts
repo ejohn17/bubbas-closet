@@ -72,7 +72,8 @@ export async function sendPickConfirmation(pick: PickDoc): Promise<void> {
       `Your box is confirmed and we're getting it ready to ship.\n\n` +
       `${pick.items.length} ${pick.items.length === 1 ? "piece" : "pieces"}:\n` +
       `${itemLines(pick)}\n\n` +
-      `Please send everything back by ${formatDate(pick.dueAt)} using the prepaid label.\n\n` +
+      `We'll email a prepaid return label when it's time to send everything back ` +
+      `(due ${formatDate(pick.dueAt)}).\n\n` +
       `Track your box: ${siteUrl()}/portal/box\n\n— The ${BRAND.name} team`,
   });
 }
@@ -87,7 +88,8 @@ export async function sendReturnReminder(pick: PickDoc): Promise<void> {
       `A friendly reminder that your rental period ends ${formatDate(pick.dueAt)}.\n\n` +
       `Still out with you:\n` +
       `${outstanding.map((i) => `  • ${i.productTitle} (size ${i.size})`).join("\n")}\n\n` +
-      `Pop them in the prepaid mailer and drop it off — then pick your next set.\n\n` +
+      `Use the prepaid return label we emailed you, pop the pieces in the mailer, ` +
+      `and drop it off — then pick your next set.\n\n` +
       `${siteUrl()}/portal\n\n— The ${BRAND.name} team`,
   });
 }
@@ -112,12 +114,19 @@ export async function sendShippedNotice(pick: PickDoc): Promise<void> {
   const tracking = pick.trackingNumber
     ? `Tracking (${pick.carrier ?? "carrier"}): ${pick.trackingNumber}\n\n`
     : "";
+  const shipping =
+    pick.shippingCents && pick.shippingCents > 0
+      ? `Outbound shipping of $${(pick.shippingCents / 100).toFixed(2)} ` +
+        `was charged to the card on file. You'll get a separate Stripe receipt.\n\n`
+      : "";
   await sendEmail({
     to: pick.email,
     subject: `Your ${BRAND.name} box is on its way`,
     text:
-      `Good news — your box has shipped.\n\n${tracking}` +
+      `Good news — your box has shipped.\n\n${tracking}${shipping}` +
       `${pick.items.length} ${pick.items.length === 1 ? "piece" : "pieces"}:\n` +
-      `${itemLines(pick)}\n\n— The ${BRAND.name} team`,
+      `${itemLines(pick)}\n\n` +
+      `We'll email a prepaid return label when it's time to send everything back.\n\n` +
+      `— The ${BRAND.name} team`,
   });
 }

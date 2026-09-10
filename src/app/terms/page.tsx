@@ -5,6 +5,7 @@ import { BRAND, TIERS } from "@/lib/config";
 import {
   RULES,
   formatShippingCountries,
+  outboundShippingIsFree,
   shippingCountriesForTier,
 } from "@/lib/rules";
 
@@ -106,10 +107,18 @@ export default function TermsPage() {
               const dest = formatShippingCountries(countries);
               return `${tier.name} ships to ${dest}${countries.length === 1 ? " only" : ""}`;
             }).join(". ")}. `}
-            Outbound shipping and a prepaid return label are included in your
-            membership. You&apos;re responsible for keeping your shipping
-            address current in your account; we aren&apos;t able to reroute a
-            box once it&apos;s on its way.
+            Outbound shipping is billed at the label cost on{" "}
+            {TIERS.filter((tier) => !outboundShippingIsFree(tier.id))
+              .map((tier) => tier.name)
+              .join(" and ")}{" "}
+            when your box ships.{" "}
+            {TIERS.filter((tier) => outboundShippingIsFree(tier.id))
+              .map((tier) => tier.name)
+              .join(" and ")}{" "}
+            includes outbound shipping. We email a prepaid return label when
+            it&apos;s time to send your box back. You&apos;re responsible for
+            keeping your shipping address current in your account; we
+            aren&apos;t able to reroute a box once it&apos;s on its way.
           </p>
 
           <h2>6. Returns</h2>

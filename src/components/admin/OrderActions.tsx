@@ -4,7 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PickStatus, UnitCondition } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
-import { CONDITION_ORDER, conditionAdminLabel } from "@/lib/rules";
+import {
+  CONDITION_ORDER,
+  conditionAdminLabel,
+  outboundShippingIsFree,
+} from "@/lib/rules";
+import { returnLabelDraft } from "@/lib/return-label-email";
 
 export type OrderItem = {
   unitId: string;
@@ -15,8 +20,9 @@ export type OrderItem = {
 };
 
 /**
- * Fulfilment controls for one order: ship it, receive garments back (all or
- * some), charge a late fee, and keep internal notes.
+ * Fulfilment controls for one order: ship it (charging outbound postage except
+ * on Premier), receive garments back (all or some), draft a return-label email,
+ * charge a late fee, and keep internal notes.
  */
 export function OrderActions({
   pickId,
@@ -26,6 +32,11 @@ export function OrderActions({
   trackingNumber,
   notes,
   feeCents,
+  shippingCents,
+  tierId,
+  email,
+  memberName,
+  dueAt,
 }: {
   pickId: string;
   status: PickStatus;
@@ -34,6 +45,11 @@ export function OrderActions({
   trackingNumber?: string;
   notes?: string;
   feeCents?: number;
+  shippingCents?: number;
+  tierId: string;
+  email?: string | null;
+  memberName?: string | null;
+  dueAt?: number | null;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
@@ -42,6 +58,7 @@ export function OrderActions({
 
   const [carrierValue, setCarrierValue] = useState(carrier ?? "");
   const [trackingValue, setTrackingValue] = useState(trackingNumber ?? "");
+  const [shippingValue, setShippingValue] = useState("");
   const [notesValue, setNotesValue] = useState(notes ?? "");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [condition, setCondition] = useState<UnitCondition>("excellent");
@@ -49,6 +66,16 @@ export function OrderActions({
   const [feeReason, setFeeReason] = useState("Late return fee");
 
   const outstanding = items.filter((item) => !item.returnedAt);
+  const shippingFree = outboundShippingIsFree(tierId);
+  const shippingCentsParsed = Math.round(Number(shippingValue) * 100);
+  const canChargeShipping =
+    shippingFree || (Number.isFinite(shippingCentsParsed) && shippingCentsParsed >= 50);
+  const draft = returnLabelDraft({
+    to: email ?? "",
+    name: memberName,
+    dueAt,
+    items: outstanding,
+  });
 
   async function act(action: string, payload: Record<string, unknown> = {}) {
     setError(null);
@@ -93,7 +120,9 @@ export function OrderActions({
         <section className="card p-5">
           <h2 className="font-semibold">Ship this box</h2>
           <p className="mt-1 text-sm text-stone">
-            Adding tracking emails the member automatically.
+            {shippingFree
+              ? "Premier includes outbound shipping — the member will not be charged. Adding tracking emails them automatically."
+              : "Enter the label cost, then submit. We'll charge their card, mark the box shipped, and send a confirmation."}
           </p>
 
           <div className="mt-4 flex flex-wrap items-end gap-3">
@@ -120,18 +149,40 @@ export function OrderActions({
                 onChange={(e) => setTrackingValue(e.target.value)}
               />
             </div>
+            {shippingFree ? null : (
+              <div className="w-28">
+                <label className="label" htmlFor="shipping-cost">
+                  Shipping ($)
+                </label>
+                <input
+                  id="shipping-cost"
+                  className="input"
+                  inputMode="decimal"
+                  value={shippingValue}
+                  onChange={(e) => setShippingValue(e.target.value)}
+                  placeholder="12.50"
+                />
+              </div>
+            )}
             <button
               type="button"
               className="btn-primary"
-              disabled={pending !== null}
+              disabled={pending !== null || !canChargeShipping}
               onClick={() =>
                 act("ship", {
                   carrier: carrierValue,
                   trackingNumber: trackingValue,
+                  shippingCents: shippingFree ? 0 : shippingCentsParsed,
                 })
               }
             >
-              {pending === "ship" ? "Saving…" : "Mark shipped"}
+              {pending === "ship"
+                ? shippingFree
+                  ? "Saving…"
+                  : "Charging…"
+                : shippingFree
+                  ? "Mark shipped"
+                  : "Ship and charge"}
             </button>
           </div>
 
@@ -143,6 +194,38 @@ export function OrderActions({
           >
             {pending === "cancel" ? "Cancelling…" : "Cancel order"}
           </button>
+        </section>
+      ) : null}
+
+      {outstanding.length > 0 &&
+      status !== "pending" &&
+      status !== "cancelled" ? (
+        <section className="card p-5">
+          <h2 className="font-semibold">Send a return label</h2>
+          <p className="mt-1 text-sm text-stone">
+            Opens a draft telling the member it&apos;s time to send pieces back.
+            Attach the prepaid label before you hit send.
+          </p>
+
+          {draft ? (
+            <div className="mt-4 flex flex-wrap gap-3">
+              <a className="btn-primary" href={draft.mailto}>
+                Draft in email app
+              </a>
+              <a
+                className="btn-outline"
+                href={draft.gmail}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Draft in Gmail
+              </a>
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-red-700">
+              This order has no member email on file.
+            </p>
+          )}
         </section>
       ) : null}
 
@@ -233,7 +316,10 @@ export function OrderActions({
           <h2 className="font-semibold">Charge a fee</h2>
           <p className="mt-1 text-sm text-stone">
             Billed to the member&apos;s saved card through Stripe.
-            {feeCents ? ` Charged so far: ${formatMoney(feeCents)}.` : ""}
+            {feeCents ? ` Fees so far: ${formatMoney(feeCents)}.` : ""}
+            {shippingCents
+              ? ` Shipping charged: ${formatMoney(shippingCents)}.`
+              : ""}
           </p>
 
           <div className="mt-4 flex flex-wrap items-end gap-3">

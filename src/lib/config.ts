@@ -63,7 +63,7 @@ export const STEPS: Step[] = [
   },
   {
     title: "Wear it all month",
-    body: "Your pieces ship to you. Enjoy them for the month with shipping included both ways.",
+    body: "Your pieces ship to you. Premier includes outbound shipping; other plans are billed the label cost. Return labels are always on us.",
   },
   {
     title: "Send back & swap",

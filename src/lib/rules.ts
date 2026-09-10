@@ -35,6 +35,13 @@ export const RULES = {
   usShippingTiers: ["signature", "premier"] as const,
 
   /**
+   * Tiers that are not billed for outbound shipping. Everyone else pays the
+   * label cost when admin marks the box shipped (C.8). Return labels are
+   * always on us, emailed by admin with a prepaid label attached.
+   */
+  freeOutboundShippingTiers: ["premier"] as const,
+
+  /**
    * Conditions a member can rent. Anything outside this list is withheld from
    * the catalogue, and a garment that comes back in one of those conditions is
    * retired rather than cleaned and re-listed (C.6).
@@ -134,6 +141,31 @@ export function unsupportedCountryMessage(
     return `We currently ship to ${label}.`;
   }
   return `This plan ships to ${label} only. Signature and Premier can ship to the United States.`;
+}
+
+/** Premier includes outbound shipping; Essential and Signature pay the label cost. */
+export function outboundShippingIsFree(
+  tierId: string | null | undefined,
+): boolean {
+  return Boolean(
+    tierId &&
+      (RULES.freeOutboundShippingTiers as readonly string[]).includes(tierId),
+  );
+}
+
+/** Short member-facing line for how outbound vs return shipping is billed. */
+export function shippingCostNote(tierId?: string | null): string {
+  if (outboundShippingIsFree(tierId)) {
+    return "Outbound shipping is included. Return labels are always on us.";
+  }
+  return "Outbound shipping is billed at the label cost when your box ships. Return labels are always on us.";
+}
+
+/** One-line label for tier cards. */
+export function outboundShippingShortNote(tierId: string): string {
+  return outboundShippingIsFree(tierId)
+    ? "Outbound shipping included"
+    : "Outbound shipping billed at cost";
 }
 
 /** Ordered best to worst, for picking the best available garment to advertise. */

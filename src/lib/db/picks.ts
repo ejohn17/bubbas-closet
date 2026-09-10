@@ -249,7 +249,11 @@ export async function confirmBox(input: {
 
 export async function markShipped(
   id: string,
-  input: { carrier?: string; trackingNumber?: string },
+  input: {
+    carrier?: string;
+    trackingNumber?: string;
+    shippingCents?: number;
+  },
 ): Promise<void> {
   const db = requireDb();
   const ref = db.collection(COL.picks).doc(id);
@@ -262,7 +266,12 @@ export async function markShipped(
       status: "shipped" as PickStatus,
       carrier: input.carrier?.trim() || undefined,
       trackingNumber: input.trackingNumber?.trim() || undefined,
+      shippingCents:
+        input.shippingCents !== undefined
+          ? Math.round(input.shippingCents)
+          : pick.shippingCents,
       shippedAt: pick.shippedAt ?? nowMs(),
+      updatedAt: nowMs(),
     }),
     { merge: true },
   );

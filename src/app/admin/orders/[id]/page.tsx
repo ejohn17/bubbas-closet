@@ -8,7 +8,8 @@ import { getTier } from "@/lib/tiers";
 import { ProductImage } from "@/components/ProductImage";
 import { StatusPill } from "@/components/StatusPill";
 import { OrderActions } from "@/components/admin/OrderActions";
-import { dueLabel, formatDate, formatDateTime } from "@/lib/format";
+import { dueLabel, formatDate, formatDateTime, formatMoney } from "@/lib/format";
+import { outboundShippingIsFree } from "@/lib/rules";
 
 export default async function AdminOrderDetail({
   params,
@@ -102,6 +103,11 @@ export default async function AdminOrderDetail({
             trackingNumber={pick.trackingNumber}
             notes={pick.notes}
             feeCents={pick.feeCents}
+            shippingCents={pick.shippingCents}
+            tierId={pick.tierId}
+            email={pick.email ?? member?.email}
+            memberName={address?.name ?? member?.name}
+            dueAt={pick.dueAt}
           />
         </div>
 
@@ -146,6 +152,18 @@ export default async function AdminOrderDetail({
                   <dd className="truncate text-right">
                     {pick.carrier ? `${pick.carrier} ` : ""}
                     {pick.trackingNumber}
+                  </dd>
+                </div>
+              ) : null}
+              {pick.status !== "pending" && pick.status !== "cancelled" ? (
+                <div className="flex justify-between gap-3">
+                  <dt>Shipping</dt>
+                  <dd>
+                    {outboundShippingIsFree(pick.tierId)
+                      ? "Included"
+                      : pick.shippingCents
+                        ? formatMoney(pick.shippingCents)
+                        : "—"}
                   </dd>
                 </div>
               ) : null}

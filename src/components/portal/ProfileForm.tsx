@@ -7,6 +7,7 @@ import {
   formatShippingCountries,
   isCountryAllowedForTier,
   resolveShippingCountry,
+  shippingCostNote,
   shippingCountriesForTier,
 } from "@/lib/rules";
 import type { Address, SizeProfile } from "@/lib/types";
@@ -123,11 +124,10 @@ export function ProfileForm({
       <fieldset>
         <legend className="text-lg font-semibold">Shipping address</legend>
         <p className="mt-1 text-sm text-stone">
-          Where your box goes each month. Shipping is included both ways
+          Where your box goes each month. {shippingCostNote(tierId)}
           {tierName
-            ? `. ${tierName} ships to ${formatShippingCountries(allowedCountries)}${allowedCountries.length === 1 ? " only" : ""}`
+            ? ` ${tierName} ships to ${formatShippingCountries(allowedCountries)}${allowedCountries.length === 1 ? " only" : ""}.`
             : ""}
-          .
         </p>
         {countryNeedsUpdate ? (
           <p className="mt-3 text-sm text-red-700">

@@ -45,8 +45,8 @@ export async function POST(request: Request) {
       line_items: [{ price: priceId, quantity: 1 }],
       allow_promotion_codes: true,
       billing_address_collection: "auto",
-      // Shipping is included both ways. Essential is Canada-only; Signature
-      // and Premier can ship to the US as well.
+      // Essential is Canada-only; Signature and Premier can ship to the US.
+      // Outbound postage is billed at ship time except on Premier.
       shipping_address_collection: {
         allowed_countries: [...shippingCountriesForTier(tierId)],
       },

@@ -11,6 +11,7 @@ import {
 import { getUser } from "@/lib/db/users";
 import { chargeFee } from "@/lib/billing";
 import { sendShippedNotice } from "@/lib/email";
+import { outboundShippingIsFree } from "@/lib/rules";
 import type { UnitCondition } from "@/lib/types";
 
 type Action = "ship" | "return" | "cancel" | "notes" | "fee";
@@ -23,6 +24,7 @@ type Body = {
   condition?: UnitCondition;
   notes?: string;
   amountCents?: number;
+  shippingCents?: number;
   description?: string;
 };
 
@@ -38,13 +40,55 @@ export async function PATCH(
 
     switch (body.action) {
       case "ship": {
+        const pick = await getPick(id);
+        if (!pick) {
+          throw new DomainError("pick_not_found", "Order not found.", 404);
+        }
+        if (pick.status !== "pending") {
+          throw new DomainError(
+            "already_shipped",
+            "This order has already shipped.",
+          );
+        }
+
+        const shippingFree = outboundShippingIsFree(pick.tierId);
+        const shippingCents = shippingFree
+          ? 0
+          : Math.round(Number(body.shippingCents));
+
+        if (!shippingFree) {
+          if (!Number.isFinite(shippingCents) || shippingCents < 50) {
+            throw new DomainError(
+              "invalid_amount",
+              "Enter the outbound shipping cost (at least $0.50).",
+            );
+          }
+
+          const member = await getUser(pick.uid);
+          if (!member?.stripeCustomerId) {
+            throw new DomainError(
+              "no_customer",
+              "This member has no Stripe customer record.",
+            );
+          }
+
+          await chargeFee({
+            stripeCustomerId: member.stripeCustomerId,
+            amountCents: shippingCents,
+            description: "Outbound shipping",
+            metadata: { pickId: id, uid: pick.uid, kind: "shipping" },
+            idempotencyKey: `pick-shipping-${id}`,
+          });
+        }
+
         await markShipped(id, {
           carrier: body.carrier,
           trackingNumber: body.trackingNumber,
+          shippingCents,
         });
-        const pick = await getPick(id);
-        if (pick) await sendShippedNotice(pick);
-        return ok({ pick });
+        const shipped = await getPick(id);
+        if (shipped) await sendShippedNotice(shipped);
+        return ok({ pick: shipped });
       }
 
       case "return": {

@@ -61,7 +61,7 @@ export default async function PortalPausedPage() {
           <section className="mt-12 border-t border-line pt-8">
             <h2 className="text-lg font-semibold">Still with you</h2>
             <p className="mt-1 text-sm text-stone">
-              Send these back with your prepaid label whenever you can.
+              Send these back with the prepaid label we emailed you whenever you can.
             </p>
             <ul className="mt-4 flex flex-col gap-2 text-sm">
               {outstanding.map((item) => (
