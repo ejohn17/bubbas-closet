@@ -6,7 +6,8 @@ import { availabilityByProduct } from "@/lib/db/units";
 import { listFavoriteProductIds } from "@/lib/db/favorites";
 import { listHolds } from "@/lib/db/holds";
 import { findPickForCycle } from "@/lib/db/picks";
-import { Catalog, type CatalogItem } from "@/components/portal/Catalog";
+import { Catalog } from "@/components/portal/Catalog";
+import { catalogSizes, type CatalogItem } from "@/lib/catalog";
 
 export const metadata = { title: "The closet" };
 
@@ -33,27 +34,17 @@ export default async function PortalHome({
   const favorites = new Set(favoriteIds);
   const boxProductIds = new Set(holds.map((h) => h.productId));
 
-  const items: CatalogItem[] = products.map((product) => {
-    const sizes = availability[product.id]?.sizes ?? {};
-    return {
-      id: product.id,
-      title: product.title,
-      brand: product.brand,
-      category: product.category,
-      image: product.images[0],
-      sizes: Object.entries(sizes)
-        .map(([size, info]) => ({
-          size,
-          count: info.count,
-          condition: info.condition,
-        }))
-        .sort((a, b) =>
-          a.size.localeCompare(b.size, undefined, { numeric: true }),
-        ),
-      favorited: favorites.has(product.id),
-      inBox: boxProductIds.has(product.id),
-    };
-  });
+  const items: CatalogItem[] = products.map((product) => ({
+    id: product.id,
+    title: product.title,
+    brand: product.brand,
+    category: product.category,
+    description: product.description,
+    images: product.images,
+    sizes: catalogSizes(availability[product.id]),
+    favorited: favorites.has(product.id),
+    inBox: boxProductIds.has(product.id),
+  }));
 
   return (
     <div>

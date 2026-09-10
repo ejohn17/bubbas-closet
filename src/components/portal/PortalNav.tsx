@@ -19,7 +19,7 @@ export function PortalNav({ boxCount }: { boxCount: number }) {
       {LINKS.map((link) => {
         const active =
           link.href === "/portal"
-            ? pathname === "/portal"
+            ? pathname === "/portal" || pathname.startsWith("/portal/item/")
             : pathname.startsWith(link.href);
 
         return (

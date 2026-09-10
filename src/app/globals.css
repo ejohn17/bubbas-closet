@@ -28,6 +28,22 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Chrome/Edge keep the default arrow on <button>, so CTAs look inert.
+   Disabled controls stay not-allowed so they still read as unavailable. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+a[href],
+label[for],
+select:not(:disabled),
+summary {
+  cursor: pointer;
+}
+
+button:disabled,
+select:disabled {
+  cursor: not-allowed;
+}
+
 /* Shared building blocks for the portal, admin, and marketing surfaces. */
 @layer components {
   /* Shared button shape. Variants below only set colour, and .btn-sm (defined
@@ -37,7 +53,7 @@ body {
   .btn-accent,
   .btn-outline,
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60;
   }
   .btn-primary {
     @apply bg-ink text-cream hover:bg-accent-dark;

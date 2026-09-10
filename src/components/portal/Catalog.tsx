@@ -1,26 +1,18 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import { ProductImage } from "@/components/ProductImage";
+import { FavoriteButton } from "@/components/portal/FavoriteButton";
+import { AddToBoxControls } from "@/components/portal/AddToBoxControls";
 import { bestCondition, conditionLabel } from "@/lib/rules";
-import type { UnitCondition } from "@/lib/types";
+import type { CatalogItem } from "@/lib/catalog";
 
-export type CatalogItem = {
-  id: string;
-  title: string;
-  brand?: string;
-  category?: string;
-  image?: string;
-  /** Availability per size, with the condition the member would receive. */
-  sizes: { size: string; count: number; condition: UnitCondition }[];
-  favorited: boolean;
-  inBox: boolean;
-};
+export type { CatalogItem };
 
 /**
- * Members-only catalogue. Sizes shown are live availability; picking one calls
- * the API, which reserves a specific physical unit and enforces the tier limit.
+ * Members-only catalogue. Cards open the piece for photos and description;
+ * adding a size is a separate labelled action.
  */
 export function Catalog({
   items,
@@ -33,8 +25,6 @@ export function Catalog({
   boxCount: number;
   defaultSize?: string;
 }) {
-  const router = useRouter();
-  const [, startTransition] = useTransition();
   const [search, setSearch] = useState("");
   const [sizeFilter, setSizeFilter] = useState<string>(
     defaultSize &&
@@ -42,15 +32,10 @@ export function Catalog({
       ? defaultSize
       : "",
   );
-  const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [inBox, setInBox] = useState<Set<string>>(
+  const inBox = useMemo(
     () => new Set(items.filter((i) => i.inBox).map((i) => i.id)),
+    [items],
   );
-  const [favorites, setFavorites] = useState<Set<string>>(
-    () => new Set(items.filter((i) => i.favorited).map((i) => i.id)),
-  );
-  const [picked, setPicked] = useState(boxCount);
 
   const allSizes = useMemo(() => {
     const set = new Set<string>();
@@ -66,7 +51,7 @@ export function Catalog({
       if (sizeFilter && !item.sizes.some((s) => s.size === sizeFilter))
         return false;
       if (!term) return true;
-      return [item.title, item.brand, item.category]
+      return [item.title, item.brand, item.category, item.description]
         .filter(Boolean)
         .join(" ")
         .toLowerCase()
@@ -74,56 +59,8 @@ export function Catalog({
     });
   }, [items, search, sizeFilter]);
 
+  const picked = boxCount;
   const full = picked >= itemLimit;
-
-  async function addToBox(productId: string, size: string) {
-    setError(null);
-    setBusy(`${productId}:${size}`);
-
-    try {
-      const res = await fetch("/api/portal/box", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, size }),
-      });
-      const body = await res.json().catch(() => null);
-
-      if (!res.ok || !body?.ok) {
-        setError(body?.message ?? "Could not add that piece.");
-        return;
-      }
-
-      setInBox((prev) => new Set(prev).add(productId));
-      setPicked((body.box?.holds?.length as number) ?? picked + 1);
-      startTransition(() => router.refresh());
-    } catch {
-      setError("Network error. Please try again.");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function toggleFavorite(productId: string) {
-    setError(null);
-    try {
-      const res = await fetch("/api/portal/favorites", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId }),
-      });
-      const body = await res.json().catch(() => null);
-      if (!res.ok || !body?.ok) return;
-
-      setFavorites((prev) => {
-        const next = new Set(prev);
-        if (body.favorited) next.add(productId);
-        else next.delete(productId);
-        return next;
-      });
-    } catch {
-      // Favoriting is non-critical; stay quiet on failure.
-    }
-  }
 
   return (
     <div>
@@ -171,12 +108,6 @@ export function Catalog({
         {full ? " — your box is full for this month." : ""}
       </p>
 
-      {error ? (
-        <p role="alert" className="mt-3 text-sm text-red-700">
-          {error}
-        </p>
-      ) : null}
-
       {visible.length === 0 ? (
         <p className="mt-16 text-center text-stone">
           Nothing matches that yet. Try another size or search.
@@ -185,74 +116,68 @@ export function Catalog({
         <ul className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((item) => {
             const isInBox = inBox.has(item.id);
-            const isFavorite = favorites.has(item.id);
+            const href = `/portal/item/${item.id}`;
+            const condition =
+              item.sizes.length > 0
+                ? item.sizes
+                    .map((s) => s.condition)
+                    .reduce((a, b) => bestCondition(a, b))
+                : null;
 
             return (
-              <li key={item.id} className="card overflow-hidden">
+              <li
+                key={item.id}
+                className="card overflow-hidden transition hover:border-accent/60"
+              >
                 <div className="relative">
-                  <ProductImage
-                    src={item.image}
-                    alt={item.title}
-                    className="h-64 w-full"
+                  <Link href={href} className="group block">
+                    <ProductImage
+                      src={item.images[0]}
+                      alt={item.title}
+                      className="h-64 w-full transition duration-300 group-hover:scale-[1.03]"
+                    />
+                    {item.images.length > 1 ? (
+                      <span className="absolute bottom-3 left-3 rounded-full bg-card/90 px-2.5 py-1 text-xs font-medium text-stone">
+                        {item.images.length} photos
+                      </span>
+                    ) : null}
+                  </Link>
+                  <FavoriteButton
+                    productId={item.id}
+                    favorited={item.favorited}
+                    className="absolute right-3 top-3 z-10"
                   />
-                  <button
-                    type="button"
-                    onClick={() => toggleFavorite(item.id)}
-                    aria-label={
-                      isFavorite ? "Remove from favorites" : "Save to favorites"
-                    }
-                    aria-pressed={isFavorite}
-                    className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-card/90 text-base shadow-sm transition hover:scale-105"
-                  >
-                    <span
-                      className={isFavorite ? "text-accent-dark" : "text-stone"}
-                    >
-                      {isFavorite ? "★" : "☆"}
-                    </span>
-                  </button>
                 </div>
 
                 <div className="p-5">
-                  <h3 className="font-medium">{item.title}</h3>
-                  {item.brand ? (
-                    <p className="mt-0.5 text-sm text-stone">{item.brand}</p>
-                  ) : null}
+                  <Link href={href} className="group block">
+                    <h3 className="font-medium transition group-hover:text-accent-dark">
+                      {item.title}
+                    </h3>
+                    {item.brand ? (
+                      <p className="mt-0.5 text-sm text-stone">{item.brand}</p>
+                    ) : null}
+                    {item.description ? (
+                      <p className="mt-2 line-clamp-2 text-sm text-stone">
+                        {item.description}
+                      </p>
+                    ) : null}
+                    {condition ? (
+                      <p className="mt-2 text-xs uppercase tracking-wider text-accent-dark">
+                        {conditionLabel(condition)}
+                      </p>
+                    ) : null}
+                  </Link>
 
-                  {item.sizes.length > 0 ? (
-                    <p className="mt-2 text-xs uppercase tracking-wider text-accent-dark">
-                      {conditionLabel(
-                        item.sizes
-                          .map((s) => s.condition)
-                          .reduce((a, b) => bestCondition(a, b)),
-                      )}
-                    </p>
-                  ) : null}
-
-                  {isInBox ? (
-                    <p className="mt-4 text-sm font-medium text-accent-dark">
-                      In your box
-                    </p>
-                  ) : (
-                    <div className="mt-4 flex flex-wrap gap-1.5">
-                      {item.sizes.map(({ size, count, condition }) => (
-                        <button
-                          key={size}
-                          type="button"
-                          disabled={full || busy !== null}
-                          onClick={() => addToBox(item.id, size)}
-                          title={`${count} available in size ${size} · ${conditionLabel(condition)}`}
-                          className="btn-outline btn-sm"
-                        >
-                          {busy === `${item.id}:${size}` ? "Adding…" : size}
-                        </button>
-                      ))}
-                      {item.sizes.length === 0 ? (
-                        <span className="text-sm text-stone">
-                          All out on loan right now
-                        </span>
-                      ) : null}
-                    </div>
-                  )}
+                  <div className="mt-4">
+                    <AddToBoxControls
+                      productId={item.id}
+                      sizes={item.sizes}
+                      inBox={isInBox}
+                      full={full && !isInBox}
+                      preferredSize={sizeFilter || defaultSize}
+                    />
+                  </div>
                 </div>
               </li>
             );

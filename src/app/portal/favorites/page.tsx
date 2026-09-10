@@ -5,7 +5,8 @@ import { getProducts } from "@/lib/db/products";
 import { availabilityByProduct } from "@/lib/db/units";
 import { listFavoriteProductIds } from "@/lib/db/favorites";
 import { listHolds } from "@/lib/db/holds";
-import { Catalog, type CatalogItem } from "@/components/portal/Catalog";
+import { Catalog } from "@/components/portal/Catalog";
+import { catalogSizes, type CatalogItem } from "@/lib/catalog";
 
 export const metadata = { title: "Favorites" };
 
@@ -30,16 +31,9 @@ export default async function FavoritesPage() {
       title: product.title,
       brand: product.brand,
       category: product.category,
-      image: product.images[0],
-      sizes: Object.entries(availability[product.id]?.sizes ?? {})
-        .map(([size, info]) => ({
-          size,
-          count: info.count,
-          condition: info.condition,
-        }))
-        .sort((a, b) =>
-          a.size.localeCompare(b.size, undefined, { numeric: true }),
-        ),
+      description: product.description,
+      images: product.images,
+      sizes: catalogSizes(availability[product.id]),
       favorited: true,
       inBox: boxProductIds.has(product.id),
     }));
