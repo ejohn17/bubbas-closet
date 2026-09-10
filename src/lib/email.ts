@@ -107,7 +107,7 @@ export async function sendPickConfirmation(pick: PickDoc): Promise<void> {
   const shipping = outboundShippingIsFree(pick.tierId)
     ? "Outbound shipping is included on your plan.\n\n"
     : estimate > 0
-      ? `Estimated outbound shipping is ${money(estimate)}. We'll charge the actual postage to the card on file when the box ships.\n\n`
+      ? `Estimated outbound shipping is ${money(estimate)}. This is not the actual shipping cost — the real postage is calculated when your box ships and charged then.\n\n`
       : "Outbound shipping will be billed at the label cost when the box ships.\n\n";
   await sendEmail({
     to: pick.email,

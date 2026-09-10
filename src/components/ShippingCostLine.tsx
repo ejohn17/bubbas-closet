@@ -30,7 +30,7 @@ export function ShippingCostLine({
         : "Premier — the member is not billed for outbound postage."
       : kind === "estimated"
         ? audience === "member"
-          ? "You'll be charged the actual label cost when this box ships. Return labels are on us."
+          ? "This is an estimate, not the actual shipping cost. The real postage is calculated when your box ships and charged then. Return labels are on us."
           : "Based on destination and piece count. Enter the real label cost when you ship."
         : audience === "member"
           ? "Charged to the card on file. Return labels are on us."

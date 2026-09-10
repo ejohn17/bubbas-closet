@@ -180,11 +180,16 @@ export function BoxSummary({
             {items.length} of {itemLimit} items
           </p>
           {hasAddress ? (
-            <p className="mt-1 text-sm text-stone">
-              {shipping === 0
-                ? "Outbound shipping included"
-                : `Estimated shipping ${formatMoney(shipping)}`}
-            </p>
+            shipping === 0 ? (
+              <p className="mt-1 text-sm text-stone">
+                Outbound shipping included
+              </p>
+            ) : (
+              <p className="mt-1 max-w-sm text-sm text-stone">
+                Estimated shipping {formatMoney(shipping)} — not the actual
+                cost. Real postage is calculated when your box ships.
+              </p>
+            )
           ) : null}
         </div>
 
