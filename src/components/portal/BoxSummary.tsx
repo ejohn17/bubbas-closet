@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ProductImage } from "@/components/ProductImage";
 import { useHoldClock } from "@/components/portal/HoldBanner";
-import { conditionLabel, RULES } from "@/lib/rules";
+import { conditionLabel, estimateOutboundShippingCents, RULES } from "@/lib/rules";
+import { formatMoney } from "@/lib/format";
 import type { UnitCondition } from "@/lib/types";
 
 export type BoxHold = {
@@ -26,11 +27,15 @@ export function BoxSummary({
   itemLimit,
   hasAddress,
   addressHint,
+  tierId,
+  country,
 }: {
   holds: BoxHold[];
   itemLimit: number;
   hasAddress: boolean;
   addressHint?: string | null;
+  tierId?: string | null;
+  country?: string | null;
 }) {
   const router = useRouter();
   const [removedIds, setRemovedIds] = useState<Set<string>>(() => new Set());
@@ -38,6 +43,11 @@ export function BoxSummary({
   const [pending, setPending] = useState<string | null>(null);
 
   const items = holds.filter((item) => !removedIds.has(item.id));
+  const shipping = estimateOutboundShippingCents({
+    tierId,
+    country,
+    itemCount: items.length,
+  });
 
   const soonest = items.length
     ? Math.min(...items.map((i) => i.expiresAt))
@@ -165,9 +175,18 @@ export function BoxSummary({
       </div>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-        <p className="text-sm text-stone">
-          {items.length} of {itemLimit} items
-        </p>
+        <div>
+          <p className="text-sm text-stone">
+            {items.length} of {itemLimit} items
+          </p>
+          {hasAddress ? (
+            <p className="mt-1 text-sm text-stone">
+              {shipping === 0
+                ? "Outbound shipping included"
+                : `Estimated shipping ${formatMoney(shipping)}`}
+            </p>
+          ) : null}
+        </div>
 
         <button
           type="button"

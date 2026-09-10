@@ -3,7 +3,8 @@ import { isOverdue, listPicks } from "@/lib/db/picks";
 import { StatusPill } from "@/components/StatusPill";
 import { FilterTabs } from "@/components/admin/FilterTabs";
 import { AdminSearch } from "@/components/admin/AdminSearch";
-import { dueLabel, formatDate } from "@/lib/format";
+import { dueLabel, formatDate, formatMoney } from "@/lib/format";
+import { outboundShippingSummary } from "@/lib/rules";
 import type { PickStatus } from "@/lib/types";
 
 const STATUSES: PickStatus[] = [
@@ -83,6 +84,15 @@ export default async function AdminOrders({
             const outstanding = pick.items.filter((i) => !i.returnedAt).length;
             const late = isOverdue(pick);
             const who = pick.shippingAddress?.name ?? pick.email ?? "Member";
+            const shipping = outboundShippingSummary(pick);
+            const shippingNote =
+              pick.status === "cancelled"
+                ? null
+                : shipping.kind === "included"
+                  ? "shipping included"
+                  : shipping.kind === "estimated"
+                    ? `est. shipping ${formatMoney(shipping.cents)}`
+                    : `shipping ${formatMoney(shipping.cents)}`;
 
             return (
               <li key={pick.id}>
@@ -98,6 +108,7 @@ export default async function AdminOrders({
                         : ""}
                       {pick.items.length} items · confirmed{" "}
                       {formatDate(pick.createdAt)}
+                      {shippingNote ? ` · ${shippingNote}` : ""}
                       {pick.trackingNumber
                         ? ` · ${pick.trackingNumber}`
                         : ""}

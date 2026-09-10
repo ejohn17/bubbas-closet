@@ -42,6 +42,25 @@ export const RULES = {
   freeOutboundShippingTiers: ["premier"] as const,
 
   /**
+   * Estimated outbound postage by destination, using item count as a stand-in
+   * for package weight — the same idea as Shopify shipping zones + weight
+   * brackets. Shown on confirmed orders until the real label is billed (C.9).
+   * Amounts are USD cents and defaults pending typical-label confirmation.
+   */
+  outboundShippingEstimateBrackets: {
+    CA: [
+      { maxItems: 10, cents: 1400 },
+      { maxItems: 20, cents: 2000 },
+      { maxItems: 40, cents: 3000 },
+    ],
+    US: [
+      { maxItems: 10, cents: 2200 },
+      { maxItems: 20, cents: 3200 },
+      { maxItems: 40, cents: 4800 },
+    ],
+  },
+
+  /**
    * Conditions a member can rent. Anything outside this list is withheld from
    * the catalogue, and a garment that comes back in one of those conditions is
    * retired rather than cleaned and re-listed (C.6).
@@ -166,6 +185,71 @@ export function outboundShippingShortNote(tierId: string): string {
   return outboundShippingIsFree(tierId)
     ? "Outbound shipping included"
     : "Outbound shipping billed at cost";
+}
+
+export type ShippingEstimateBracket = {
+  maxItems: number;
+  cents: number;
+};
+
+/** Postage estimate for a box, before the actual label is purchased. */
+export function estimateOutboundShippingCents(input: {
+  tierId?: string | null;
+  country?: string | null;
+  itemCount: number;
+}): number {
+  if (outboundShippingIsFree(input.tierId)) return 0;
+  if (input.itemCount <= 0) return 0;
+
+  const country = normalizeShippingCountry(input.country) ?? "CA";
+  const brackets = RULES.outboundShippingEstimateBrackets[country];
+  const match =
+    brackets.find((bracket) => input.itemCount <= bracket.maxItems) ??
+    brackets[brackets.length - 1];
+  return match?.cents ?? 0;
+}
+
+export type OutboundShippingKind = "included" | "estimated" | "charged";
+
+export type OutboundShippingSummary = {
+  kind: OutboundShippingKind;
+  cents: number;
+};
+
+/**
+ * What to show for outbound shipping on an order: included (Premier), an
+ * estimate while the box is still pending, or the amount billed at ship time.
+ * Older picks without a stored estimate are computed from the current table.
+ */
+export function outboundShippingSummary(pick: {
+  tierId: string;
+  status: string;
+  shippingCents?: number;
+  estimatedShippingCents?: number;
+  shippingAddress?: { country?: string } | null;
+  items: { unitId: string }[];
+}): OutboundShippingSummary {
+  if (outboundShippingIsFree(pick.tierId)) {
+    return { kind: "included", cents: 0 };
+  }
+
+  const billed =
+    pick.status !== "pending" &&
+    pick.status !== "cancelled" &&
+    typeof pick.shippingCents === "number";
+  if (billed) {
+    return { kind: "charged", cents: pick.shippingCents ?? 0 };
+  }
+
+  const estimated =
+    typeof pick.estimatedShippingCents === "number"
+      ? pick.estimatedShippingCents
+      : estimateOutboundShippingCents({
+          tierId: pick.tierId,
+          country: pick.shippingAddress?.country,
+          itemCount: pick.items.length,
+        });
+  return { kind: "estimated", cents: estimated };
 }
 
 /** Ordered best to worst, for picking the best available garment to advertise. */

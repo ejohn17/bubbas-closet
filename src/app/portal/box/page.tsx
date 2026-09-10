@@ -61,6 +61,8 @@ export default async function BoxPage() {
           itemLimit={entitlement.itemLimit}
           hasAddress={canShip}
           addressHint={addressHint}
+          tierId={entitlement.subscription?.tierId}
+          country={address?.country}
         />
       )}
     </div>

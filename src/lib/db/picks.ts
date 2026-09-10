@@ -10,7 +10,7 @@ import type {
   UnitDoc,
 } from "@/lib/types";
 import { clean, COL, docTo, docsTo, DomainError, nowMs } from "@/lib/db/base";
-import { isRentableCondition } from "@/lib/rules";
+import { estimateOutboundShippingCents, isRentableCondition } from "@/lib/rules";
 import { listUnits } from "@/lib/db/units";
 
 /**
@@ -219,6 +219,11 @@ export async function confirmBox(input: {
       items,
       status: "pending",
       shippingAddress: input.shippingAddress ?? null,
+      estimatedShippingCents: estimateOutboundShippingCents({
+        tierId: input.tierId,
+        country: input.shippingAddress?.country,
+        itemCount: items.length,
+      }),
       dueAt: input.dueAt ?? null,
       createdAt: at,
       shippedAt: null,

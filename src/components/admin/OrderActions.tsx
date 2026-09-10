@@ -33,6 +33,7 @@ export function OrderActions({
   notes,
   feeCents,
   shippingCents,
+  estimatedShippingCents,
   tierId,
   email,
   memberName,
@@ -46,6 +47,7 @@ export function OrderActions({
   notes?: string;
   feeCents?: number;
   shippingCents?: number;
+  estimatedShippingCents?: number;
   tierId: string;
   email?: string | null;
   memberName?: string | null;
@@ -58,7 +60,11 @@ export function OrderActions({
 
   const [carrierValue, setCarrierValue] = useState(carrier ?? "");
   const [trackingValue, setTrackingValue] = useState(trackingNumber ?? "");
-  const [shippingValue, setShippingValue] = useState("");
+  const [shippingValue, setShippingValue] = useState(
+    estimatedShippingCents && estimatedShippingCents > 0
+      ? (estimatedShippingCents / 100).toFixed(2)
+      : "",
+  );
   const [notesValue, setNotesValue] = useState(notes ?? "");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [condition, setCondition] = useState<UnitCondition>("excellent");
@@ -95,6 +101,15 @@ export function OrderActions({
         return false;
       }
 
+      if (action === "ship") {
+        setNotice(
+          body.emailed
+            ? "Shipped and the confirmation email was sent."
+            : (body.emailError ??
+                "Shipped, but the confirmation email did not send."),
+        );
+      }
+
       router.refresh();
       return true;
     } catch {
@@ -122,7 +137,9 @@ export function OrderActions({
           <p className="mt-1 text-sm text-stone">
             {shippingFree
               ? "Premier includes outbound shipping — the member will not be charged. Adding tracking emails them automatically."
-              : "Enter the label cost, then submit. We'll charge their card, mark the box shipped, and send a confirmation."}
+              : estimatedShippingCents
+                ? `Estimate is ${formatMoney(estimatedShippingCents)} based on destination and piece count. Enter the label cost, then submit — we'll charge their card, mark the box shipped, and send a confirmation.`
+                : "Enter the label cost, then submit. We'll charge their card, mark the box shipped, and send a confirmation."}
           </p>
 
           <div className="mt-4 flex flex-wrap items-end gap-3">

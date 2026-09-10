@@ -9,7 +9,8 @@ import { ProductImage } from "@/components/ProductImage";
 import { StatusPill } from "@/components/StatusPill";
 import { OrderActions } from "@/components/admin/OrderActions";
 import { dueLabel, formatDate, formatDateTime, formatMoney } from "@/lib/format";
-import { outboundShippingIsFree } from "@/lib/rules";
+import { outboundShippingSummary } from "@/lib/rules";
+import { ShippingCostLine } from "@/components/ShippingCostLine";
 
 export default async function AdminOrderDetail({
   params,
@@ -33,6 +34,7 @@ export default async function AdminOrderDetail({
   const tier = getTier(pick.tierId);
   const address = pick.shippingAddress;
   const late = isOverdue(pick);
+  const shipping = outboundShippingSummary(pick);
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -104,6 +106,7 @@ export default async function AdminOrderDetail({
             notes={pick.notes}
             feeCents={pick.feeCents}
             shippingCents={pick.shippingCents}
+            estimatedShippingCents={shipping.cents}
             tierId={pick.tierId}
             email={pick.email ?? member?.email}
             memberName={address?.name ?? member?.name}
@@ -135,6 +138,18 @@ export default async function AdminOrderDetail({
             )}
           </section>
 
+          {pick.status !== "cancelled" ? (
+            <section className="card p-5">
+              <ShippingCostLine audience="admin" {...shipping} />
+              {shipping.kind === "charged" &&
+              typeof pick.estimatedShippingCents === "number" ? (
+                <p className="mt-2 text-xs text-stone">
+                  Estimated at confirm: {formatMoney(pick.estimatedShippingCents)}
+                </p>
+              ) : null}
+            </section>
+          ) : null}
+
           <section className="card p-5 text-sm">
             <h2 className="font-semibold">Timeline</h2>
             <dl className="mt-3 flex flex-col gap-2 text-stone">
@@ -152,18 +167,6 @@ export default async function AdminOrderDetail({
                   <dd className="truncate text-right">
                     {pick.carrier ? `${pick.carrier} ` : ""}
                     {pick.trackingNumber}
-                  </dd>
-                </div>
-              ) : null}
-              {pick.status !== "pending" && pick.status !== "cancelled" ? (
-                <div className="flex justify-between gap-3">
-                  <dt>Shipping</dt>
-                  <dd>
-                    {outboundShippingIsFree(pick.tierId)
-                      ? "Included"
-                      : pick.shippingCents
-                        ? formatMoney(pick.shippingCents)
-                        : "—"}
                   </dd>
                 </div>
               ) : null}

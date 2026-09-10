@@ -33,6 +33,14 @@ export function toErrorResponse(err: unknown) {
   if (err instanceof DomainError) {
     return fail(err.code, err.message, err.status);
   }
+  if (err && typeof err === "object" && "raw" in err && "message" in err) {
+    const stripeErr = err as { message: string; code?: string; statusCode?: number };
+    return fail(
+      stripeErr.code ?? "stripe_error",
+      stripeErr.message || "Stripe could not collect this payment.",
+      stripeErr.statusCode && stripeErr.statusCode < 500 ? stripeErr.statusCode : 400,
+    );
+  }
   const message = err instanceof Error ? err.message : "Unexpected error.";
   if (message.includes("not configured")) {
     return fail("not_configured", message, 503);

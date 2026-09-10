@@ -1,6 +1,7 @@
 import { BRAND } from "@/lib/config";
 import type { PickDoc } from "@/lib/types";
 import { siteUrl } from "@/lib/stripe";
+import { outboundShippingIsFree } from "@/lib/rules";
 
 /**
  * Transactional email via Resend (no SDK dependency).
@@ -17,10 +18,24 @@ type SendInput = {
   text: string;
 };
 
+export type EmailResult = { sent: true } | { sent: false; reason: string };
+
 export async function sendEmail({ to, subject, text }: SendInput): Promise<boolean> {
+  return (await sendEmailResult({ to, subject, text })).sent;
+}
+
+async function sendEmailResult({ to, subject, text }: SendInput): Promise<EmailResult> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.WAITLIST_FROM_EMAIL;
-  if (!apiKey || !from || !to) return false;
+  if (!apiKey || !from) {
+    return {
+      sent: false,
+      reason: "Email isn't configured. Set RESEND_API_KEY and WAITLIST_FROM_EMAIL.",
+    };
+  }
+  if (!to) {
+    return { sent: false, reason: "This order has no member email." };
+  }
 
   try {
     const res = await fetch("https://api.resend.com/emails", {
@@ -31,10 +46,29 @@ export async function sendEmail({ to, subject, text }: SendInput): Promise<boole
       },
       body: JSON.stringify({ from, to, subject, text }),
     });
-    return res.ok;
-  } catch {
-    // Never fail an operation because an email had a hiccup.
-    return false;
+    if (res.ok) return { sent: true };
+
+    const detail = await res.text();
+    console.error("[email] Resend rejected", res.status, detail);
+    const lower = detail.toLowerCase();
+    if (
+      res.status === 403 ||
+      lower.includes("not verified") ||
+      lower.includes("domain")
+    ) {
+      return {
+        sent: false,
+        reason:
+          "Resend rejected the from-address. Verify bubbascloset.com in Resend (SPF/DKIM), or use their onboarding address until then.",
+      };
+    }
+    return {
+      sent: false,
+      reason: "The confirmation email did not send. Check the server log for the Resend response.",
+    };
+  } catch (err) {
+    console.error("[email] send failed", err);
+    return { sent: false, reason: "The confirmation email did not send (network error)." };
   }
 }
 
@@ -63,8 +97,18 @@ function formatDate(ms: number | null | undefined): string {
   });
 }
 
+function money(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
 export async function sendPickConfirmation(pick: PickDoc): Promise<void> {
   if (!pick.email) return;
+  const estimate = pick.estimatedShippingCents ?? 0;
+  const shipping = outboundShippingIsFree(pick.tierId)
+    ? "Outbound shipping is included on your plan.\n\n"
+    : estimate > 0
+      ? `Estimated outbound shipping is ${money(estimate)}. We'll charge the actual postage to the card on file when the box ships.\n\n`
+      : "Outbound shipping will be billed at the label cost when the box ships.\n\n";
   await sendEmail({
     to: pick.email,
     subject: `Your ${BRAND.name} box is confirmed`,
@@ -72,9 +116,10 @@ export async function sendPickConfirmation(pick: PickDoc): Promise<void> {
       `Your box is confirmed and we're getting it ready to ship.\n\n` +
       `${pick.items.length} ${pick.items.length === 1 ? "piece" : "pieces"}:\n` +
       `${itemLines(pick)}\n\n` +
+      shipping +
       `We'll email a prepaid return label when it's time to send everything back ` +
       `(due ${formatDate(pick.dueAt)}).\n\n` +
-      `Track your box: ${siteUrl()}/portal/box\n\n— The ${BRAND.name} team`,
+      `Track your box: ${siteUrl()}/portal/orders\n\n— The ${BRAND.name} team`,
   });
 }
 
@@ -109,17 +154,19 @@ export async function sendOverdueNotice(pick: PickDoc): Promise<void> {
   });
 }
 
-export async function sendShippedNotice(pick: PickDoc): Promise<void> {
-  if (!pick.email) return;
+export async function sendShippedNotice(pick: PickDoc): Promise<EmailResult> {
+  if (!pick.email) {
+    return { sent: false, reason: "This order has no member email." };
+  }
   const tracking = pick.trackingNumber
     ? `Tracking (${pick.carrier ?? "carrier"}): ${pick.trackingNumber}\n\n`
     : "";
   const shipping =
     pick.shippingCents && pick.shippingCents > 0
-      ? `Outbound shipping of $${(pick.shippingCents / 100).toFixed(2)} ` +
+      ? `Outbound shipping of ${money(pick.shippingCents)} ` +
         `was charged to the card on file. You'll get a separate Stripe receipt.\n\n`
       : "";
-  await sendEmail({
+  return sendEmailResult({
     to: pick.email,
     subject: `Your ${BRAND.name} box is on its way`,
     text:

@@ -167,6 +167,11 @@ export type PickDoc = {
   feeCents?: number;
   /** Outbound label cost billed at ship time; 0 when the tier includes shipping. */
   shippingCents?: number;
+  /**
+   * Postage estimate stored at confirm time from destination + piece count.
+   * Display-only until admin enters the real label cost.
+   */
+  estimatedShippingCents?: number;
   notes?: string;
   createdAt: number;
   shippedAt?: number | null;

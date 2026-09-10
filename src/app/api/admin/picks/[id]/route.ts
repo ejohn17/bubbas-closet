@@ -77,7 +77,7 @@ export async function PATCH(
             amountCents: shippingCents,
             description: "Outbound shipping",
             metadata: { pickId: id, uid: pick.uid, kind: "shipping" },
-            idempotencyKey: `pick-shipping-${id}`,
+            idempotencyKey: `pick-shipping-v2-${id}`,
           });
         }
 
@@ -87,8 +87,14 @@ export async function PATCH(
           shippingCents,
         });
         const shipped = await getPick(id);
-        if (shipped) await sendShippedNotice(shipped);
-        return ok({ pick: shipped });
+        const email = shipped
+          ? await sendShippedNotice(shipped)
+          : { sent: false as const, reason: "Order not found after shipping." };
+        return ok({
+          pick: shipped,
+          emailed: email.sent,
+          ...(email.sent ? {} : { emailError: email.reason }),
+        });
       }
 
       case "return": {

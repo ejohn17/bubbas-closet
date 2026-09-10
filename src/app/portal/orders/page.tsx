@@ -3,6 +3,8 @@ import { listPicks, isOverdue } from "@/lib/db/picks";
 import { ProductImage } from "@/components/ProductImage";
 import { StatusPill } from "@/components/StatusPill";
 import { formatDate } from "@/lib/format";
+import { outboundShippingSummary } from "@/lib/rules";
+import { ShippingCostLine } from "@/components/ShippingCostLine";
 
 export const metadata = { title: "My rentals" };
 
@@ -38,6 +40,7 @@ export default async function OrdersPage({
           {picks.map((pick) => {
             const outstanding = pick.items.filter((i) => !i.returnedAt).length;
             const late = isOverdue(pick);
+            const shipping = outboundShippingSummary(pick);
 
             return (
               <li key={pick.id} className="card p-5">
@@ -80,6 +83,12 @@ export default async function OrdersPage({
                     </li>
                   ))}
                 </ul>
+
+                {pick.status !== "cancelled" ? (
+                  <div className="mt-4 border-t border-line pt-4">
+                    <ShippingCostLine audience="member" {...shipping} />
+                  </div>
+                ) : null}
 
                 {outstanding > 0 && pick.status !== "pending" ? (
                   <p className="mt-4 text-sm text-stone">

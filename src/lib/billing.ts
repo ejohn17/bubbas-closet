@@ -96,6 +96,19 @@ export async function syncSubscription(
     currentPeriodEnd: end,
     cancelAtPeriodEnd: sub.cancel_at_period_end === true,
   });
+
+  // Checkout stores the card on the subscription, not the customer's invoice
+  // default — copy it so one-off shipping/fee invoices can charge automatically.
+  const paymentMethodId = stripeId(sub.default_payment_method);
+  if (paymentMethodId) {
+    try {
+      await requireStripe().customers.update(stripeCustomerId, {
+        invoice_settings: { default_payment_method: paymentMethodId },
+      });
+    } catch (err) {
+      console.warn("[billing] could not set default invoice payment method", err);
+    }
+  }
 }
 
 /** Price id is authoritative; checkout metadata is the fallback. */
@@ -183,6 +196,62 @@ export async function changeTier(input: {
   return { applied: "scheduled" };
 }
 
+function stripeId(
+  value: string | { id: string } | null | undefined,
+): string | null {
+  if (!value) return null;
+  return typeof value === "string" ? value : value.id;
+}
+
+/** Card Stripe will charge for a one-off invoice (shipping, late fees). */
+export async function defaultCardId(
+  stripeCustomerId: string,
+): Promise<string | null> {
+  const stripe = requireStripe();
+  const customer = await stripe.customers.retrieve(stripeCustomerId);
+  if ((customer as Stripe.DeletedCustomer).deleted) return null;
+
+  const fromCustomer = stripeId(
+    (customer as Stripe.Customer).invoice_settings?.default_payment_method,
+  );
+  if (fromCustomer) return fromCustomer;
+
+  const subs = await stripe.subscriptions.list({
+    customer: stripeCustomerId,
+    status: "all",
+    limit: 10,
+  });
+  const rank = (status: string) => {
+    const order = ["active", "trialing", "past_due"];
+    const i = order.indexOf(status);
+    return i === -1 ? 99 : i;
+  };
+  for (const sub of [...subs.data].sort((a, b) => rank(a.status) - rank(b.status))) {
+    const fromSub = stripeId(sub.default_payment_method);
+    if (fromSub) return fromSub;
+  }
+
+  const cards = await stripe.paymentMethods.list({
+    customer: stripeCustomerId,
+    type: "card",
+    limit: 1,
+  });
+  return cards.data[0]?.id ?? null;
+}
+
+function rethrowStripe(err: unknown): never {
+  if (err instanceof DomainError) throw err;
+  if (err && typeof err === "object" && "raw" in err && "message" in err) {
+    const stripeErr = err as { message: string; code?: string; statusCode?: number };
+    throw new DomainError(
+      stripeErr.code ?? "stripe_error",
+      stripeErr.message || "Stripe could not collect this payment.",
+      stripeErr.statusCode && stripeErr.statusCode < 500 ? stripeErr.statusCode : 400,
+    );
+  }
+  throw err;
+}
+
 /** One-off late, damage, or shipping charge on the member's saved payment method. */
 export async function chargeFee(input: {
   stripeCustomerId: string;
@@ -197,36 +266,76 @@ export async function chargeFee(input: {
     throw new DomainError("invalid_amount", "Fee must be at least $0.50.");
   }
 
+  const paymentMethodId = await defaultCardId(input.stripeCustomerId);
+  if (!paymentMethodId) {
+    throw new DomainError(
+      "no_payment_method",
+      "This member has no card on file. Ask them to update billing in the customer portal.",
+    );
+  }
+
   const opts = (suffix: string) =>
     input.idempotencyKey
       ? { idempotencyKey: `${input.idempotencyKey}${suffix}` }
       : undefined;
 
-  const invoice = await stripe.invoices.create(
-    {
-      customer: input.stripeCustomerId,
-      collection_method: "charge_automatically",
-      auto_advance: true,
-      description: input.description,
-      metadata: input.metadata,
-    },
-    opts(""),
-  );
+  try {
+    const created = await stripe.invoices.create(
+      {
+        customer: input.stripeCustomerId,
+        currency: RULES.currency,
+        collection_method: "charge_automatically",
+        auto_advance: false,
+        pending_invoice_items_behavior: "exclude",
+        default_payment_method: paymentMethodId,
+        description: input.description,
+        metadata: input.metadata,
+      },
+      opts(""),
+    );
+    if (!created.id) {
+      throw new DomainError("stripe_error", "Stripe did not create an invoice.");
+    }
 
-  await stripe.invoiceItems.create(
-    {
-      customer: input.stripeCustomerId,
-      amount: Math.round(input.amountCents),
-      currency: RULES.currency,
-      description: input.description,
-      invoice: invoice.id,
-    },
-    opts("-item"),
-  );
+    const withLines = await stripe.invoices.addLines(
+      created.id,
+      {
+        lines: [
+          {
+            amount: Math.round(input.amountCents),
+            description: input.description,
+          },
+        ],
+      },
+      opts("-item"),
+    );
+    if ((withLines.amount_due ?? 0) < 50) {
+      throw new DomainError(
+        "invoice_empty",
+        "Stripe created an invoice without the shipping line. Try again.",
+      );
+    }
 
-  if (invoice.id) {
-    await stripe.invoices.finalizeInvoice(invoice.id, undefined, opts("-finalize"));
+    await stripe.invoices.finalizeInvoice(
+      created.id,
+      { auto_advance: false },
+      opts("-finalize"),
+    );
+
+    const paid = await stripe.invoices.pay(
+      created.id,
+      { payment_method: paymentMethodId, off_session: true },
+      opts("-pay"),
+    );
+    if (paid.status !== "paid") {
+      throw new DomainError(
+        "payment_incomplete",
+        `Stripe did not collect payment (invoice ${paid.status ?? "unknown"}).`,
+      );
+    }
+
+    return { invoiceId: paid.id };
+  } catch (err) {
+    rethrowStripe(err);
   }
-
-  return { invoiceId: invoice.id ?? "" };
 }
