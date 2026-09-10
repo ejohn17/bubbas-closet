@@ -1,7 +1,12 @@
 import { ok, readJson, requireApiUser, toErrorResponse } from "@/lib/api";
 import { DomainError } from "@/lib/db/base";
+import { getPrimarySubscription } from "@/lib/db/subscriptions";
 import { updateShippingAddress, updateSizeProfile } from "@/lib/db/users";
-import { normalizeShippingCountry } from "@/lib/rules";
+import {
+  isCountryAllowedForTier,
+  normalizeShippingCountry,
+  unsupportedCountryMessage,
+} from "@/lib/rules";
 import type { Address, SizeProfile } from "@/lib/types";
 
 /** Saves the member's size profile and/or shipping address. */
@@ -36,10 +41,11 @@ export async function PUT(request: Request) {
         );
       }
       const country = normalizeShippingCountry(addr.country);
-      if (!country) {
+      const tierId = (await getPrimarySubscription(user.uid))?.tierId ?? null;
+      if (!country || !isCountryAllowedForTier(country, tierId)) {
         throw new DomainError(
           "unsupported_country",
-          "We currently ship to the United States and Canada.",
+          unsupportedCountryMessage(tierId),
         );
       }
       await updateShippingAddress(user.uid, {

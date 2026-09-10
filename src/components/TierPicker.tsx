@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { shippingNoteForTier } from "@/lib/rules";
 
 export type TierOption = {
   id: string;
@@ -120,6 +121,9 @@ export function TierPicker({
                 {tier.items} items per month
               </p>
               <p className="mt-3 text-sm text-stone">{tier.blurb}</p>
+              <p className="mt-2 text-xs font-medium text-stone">
+                {shippingNoteForTier(tier.id)}
+              </p>
 
               {!tier.available ? (
                 <p className="mt-4 text-xs text-stone">

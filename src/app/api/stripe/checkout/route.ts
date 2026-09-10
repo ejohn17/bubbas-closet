@@ -2,7 +2,7 @@ import { ok, readJson, requireApiUser, toErrorResponse } from "@/lib/api";
 import { DomainError } from "@/lib/db/base";
 import { getEntitlement } from "@/lib/db/subscriptions";
 import { ensureStripeCustomer } from "@/lib/billing";
-import { RULES } from "@/lib/rules";
+import { shippingCountriesForTier } from "@/lib/rules";
 import { requireStripe, siteUrl } from "@/lib/stripe";
 import { priceIdForTier } from "@/lib/tiers";
 
@@ -45,9 +45,10 @@ export async function POST(request: Request) {
       line_items: [{ price: priceId, quantity: 1 }],
       allow_promotion_codes: true,
       billing_address_collection: "auto",
-      // Shipping is included both ways, so collect the address at signup.
+      // Shipping is included both ways. Essential is Canada-only; Signature
+      // and Premier can ship to the US as well.
       shipping_address_collection: {
-        allowed_countries: [...RULES.shippingCountries],
+        allowed_countries: [...shippingCountriesForTier(tierId)],
       },
       subscription_data: {
         metadata: { uid: user.uid, tierId },

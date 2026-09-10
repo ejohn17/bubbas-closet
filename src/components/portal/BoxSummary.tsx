@@ -24,10 +24,12 @@ export function BoxSummary({
   holds,
   itemLimit,
   hasAddress,
+  addressHint,
 }: {
   holds: BoxHold[];
   itemLimit: number;
   hasAddress: boolean;
+  addressHint?: string | null;
 }) {
   const router = useRouter();
   const [items, setItems] = useState(holds);
@@ -155,7 +157,7 @@ export function BoxSummary({
 
       {!hasAddress ? (
         <p className="mt-4 text-sm text-stone">
-          Add a shipping address in{" "}
+          {addressHint ?? "Add a shipping address"} in{" "}
           <Link href="/portal/account" className="link text-ink">
             your account
           </Link>{" "}

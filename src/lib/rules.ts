@@ -25,10 +25,14 @@ export const RULES = {
   currency: "usd",
 
   /**
-   * Countries Stripe Checkout and the portal address form will accept.
-   * ISO 3166-1 alpha-2, as Stripe's shipping_address_collection requires.
+   * Countries we ship to at all. ISO 3166-1 alpha-2, as Stripe's
+   * shipping_address_collection requires. Per-tier subsets come from
+   * shippingCountriesForTier() — US is Signature and Premier only (C.7).
    */
   shippingCountries: ["US", "CA"] as const,
+
+  /** Tiers that may ship to the United States. Everyone else is Canada-only. */
+  usShippingTiers: ["signature", "premier"] as const,
 
   /**
    * Conditions a member can rent. Anything outside this list is withheld from
@@ -64,6 +68,72 @@ export function normalizeShippingCountry(
   if (!code) return null;
   if (isShippingCountry(code)) return code;
   return SHIPPING_COUNTRY_ALIASES[code] ?? null;
+}
+
+/** Countries a given membership may ship to. Unknown / Essential → Canada only. */
+export function shippingCountriesForTier(
+  tierId: string | null | undefined,
+): ShippingCountry[] {
+  if (
+    tierId &&
+    (RULES.usShippingTiers as readonly string[]).includes(tierId)
+  ) {
+    return [...RULES.shippingCountries];
+  }
+  return ["CA"];
+}
+
+export function defaultShippingCountry(
+  tierId: string | null | undefined,
+): ShippingCountry {
+  return shippingCountriesForTier(tierId)[0] ?? "CA";
+}
+
+export function isCountryAllowedForTier(
+  country: string | null | undefined,
+  tierId: string | null | undefined,
+): boolean {
+  const normalized = normalizeShippingCountry(country);
+  return Boolean(
+    normalized && shippingCountriesForTier(tierId).includes(normalized),
+  );
+}
+
+export function resolveShippingCountry(
+  country: string | null | undefined,
+  tierId: string | null | undefined,
+): ShippingCountry {
+  const normalized = normalizeShippingCountry(country);
+  const allowed = shippingCountriesForTier(tierId);
+  if (normalized && allowed.includes(normalized)) return normalized;
+  return allowed[0] ?? "CA";
+}
+
+export function formatShippingCountries(
+  countries: readonly ShippingCountry[],
+): string {
+  const names = countries.map((code) =>
+    code === "US" ? "the United States" : SHIPPING_COUNTRY_LABELS[code],
+  );
+  if (names.length <= 1) return names[0] ?? "";
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]}`;
+}
+
+export function shippingNoteForTier(tierId: string): string {
+  const countries = shippingCountriesForTier(tierId);
+  const label = formatShippingCountries(countries);
+  return countries.length === 1 ? `Ships to ${label} only` : `Ships to ${label}`;
+}
+
+export function unsupportedCountryMessage(
+  tierId: string | null | undefined,
+): string {
+  const label = formatShippingCountries(shippingCountriesForTier(tierId));
+  if (isCountryAllowedForTier("US", tierId)) {
+    return `We currently ship to ${label}.`;
+  }
+  return `This plan ships to ${label} only. Signature and Premier can ship to the United States.`;
 }
 
 /** Ordered best to worst, for picking the best available garment to advertise. */

@@ -4,6 +4,7 @@ import { getEntitlement } from "@/lib/db/subscriptions";
 import { listHolds } from "@/lib/db/holds";
 import { findPickForCycle } from "@/lib/db/picks";
 import { BoxSummary } from "@/components/portal/BoxSummary";
+import { isCountryAllowedForTier } from "@/lib/rules";
 
 export const metadata = { title: "My box" };
 
@@ -15,6 +16,17 @@ export default async function BoxPage() {
   const cyclePick = entitlement.cycleKey
     ? await findPickForCycle(user.uid, entitlement.cycleKey)
     : null;
+
+  const address = user.profile?.shippingAddress;
+  const canShip = Boolean(
+    address?.line1 &&
+      isCountryAllowedForTier(address.country, entitlement.subscription?.tierId),
+  );
+  const addressHint = canShip
+    ? null
+    : address?.line1
+      ? "Your current address isn't available on this plan. Update it"
+      : null;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -47,7 +59,8 @@ export default async function BoxPage() {
             expiresAt: h.expiresAt,
           }))}
           itemLimit={entitlement.itemLimit}
-          hasAddress={Boolean(user.profile?.shippingAddress?.line1)}
+          hasAddress={canShip}
+          addressHint={addressHint}
         />
       )}
     </div>

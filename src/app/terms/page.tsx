@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 import { BRAND, TIERS } from "@/lib/config";
-import { RULES } from "@/lib/rules";
+import {
+  RULES,
+  formatShippingCountries,
+  shippingCountriesForTier,
+} from "@/lib/rules";
 
 /**
  * Draft rental terms. Numbers come from config so the copy can't drift from
@@ -15,7 +19,7 @@ export const metadata: Metadata = {
   description: `Membership, rental, return, and damage terms for ${BRAND.name}.`,
 };
 
-const LAST_UPDATED = "August 26, 2026";
+const LAST_UPDATED = "September 10, 2026";
 
 export default function TermsPage() {
   const limits = TIERS.map((t) => `${t.name} (${t.items} items)`).join(", ");
@@ -97,11 +101,15 @@ export default function TermsPage() {
 
           <h2>5. Shipping</h2>
           <p>
-            We ship to the United States and Canada. Outbound shipping and a
-            prepaid return label are included in your membership. You&apos;re
-            responsible for keeping your shipping address current in your
-            account; we aren&apos;t able to reroute a box once it&apos;s on its
-            way.
+            {`${TIERS.map((tier) => {
+              const countries = shippingCountriesForTier(tier.id);
+              const dest = formatShippingCountries(countries);
+              return `${tier.name} ships to ${dest}${countries.length === 1 ? " only" : ""}`;
+            }).join(". ")}. `}
+            Outbound shipping and a prepaid return label are included in your
+            membership. You&apos;re responsible for keeping your shipping
+            address current in your account; we aren&apos;t able to reroute a
+            box once it&apos;s on its way.
           </p>
 
           <h2>6. Returns</h2>

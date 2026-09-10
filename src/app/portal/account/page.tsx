@@ -3,6 +3,11 @@ import { getEntitlement } from "@/lib/db/subscriptions";
 import { getTier, priceIdForTier } from "@/lib/tiers";
 import { TIERS } from "@/lib/config";
 import { formatDate } from "@/lib/format";
+import {
+  formatShippingCountries,
+  isCountryAllowedForTier,
+  shippingCountriesForTier,
+} from "@/lib/rules";
 import { StatusPill } from "@/components/StatusPill";
 import { ProfileForm } from "@/components/portal/ProfileForm";
 import { ManageBillingButton } from "@/components/portal/ManageBillingButton";
@@ -53,6 +58,13 @@ export default async function AccountPage() {
           <p className="mt-4 text-sm text-stone">
             Switching to <strong>{pendingTier.name}</strong> at the start of your
             next cycle.
+            {user.profile?.shippingAddress &&
+            !isCountryAllowedForTier(
+              user.profile.shippingAddress.country,
+              pendingTier.id,
+            )
+              ? ` ${pendingTier.name} ships to ${formatShippingCountries(shippingCountriesForTier(pendingTier.id))} only — update your address before then or you won't be able to confirm a box.`
+              : ""}
           </p>
         ) : null}
 
@@ -79,6 +91,8 @@ export default async function AccountPage() {
         <ProfileForm
           sizeProfile={user.profile?.sizeProfile}
           shippingAddress={user.profile?.shippingAddress ?? null}
+          tierId={subscription?.tierId ?? null}
+          tierName={tier?.name ?? null}
         />
       </section>
     </div>

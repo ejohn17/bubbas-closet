@@ -18,7 +18,12 @@ import {
   tierForPriceId,
 } from "@/lib/tiers";
 import type { SubscriptionStatus } from "@/lib/types";
-import { RULES } from "@/lib/rules";
+import {
+  RULES,
+  formatShippingCountries,
+  isCountryAllowedForTier,
+  shippingCountriesForTier,
+} from "@/lib/rules";
 import {
   customerIdOf,
   priceIdOf,
@@ -121,6 +126,19 @@ export async function changeTier(input: {
   const newPriceId = priceIdForTier(input.toTierId);
   if (!newPriceId) {
     throw new DomainError("tier_unavailable", "That plan isn't available yet.");
+  }
+
+  const profile = await getUser(input.uid);
+  if (
+    profile?.shippingAddress?.line1 &&
+    !isCountryAllowedForTier(profile.shippingAddress.country, input.toTierId)
+  ) {
+    const toTier = getTier(input.toTierId);
+    const dest = formatShippingCountries(shippingCountriesForTier(input.toTierId));
+    throw new DomainError(
+      "address_not_allowed",
+      `${toTier?.name ?? "That plan"} ships to ${dest} only. Update your shipping address before switching.`,
+    );
   }
 
   const sub = await stripe.subscriptions.retrieve(input.subscriptionId);

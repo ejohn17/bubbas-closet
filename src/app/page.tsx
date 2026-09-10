@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 import { BRAND, TIERS, STEPS } from "@/lib/config";
+import { shippingNoteForTier } from "@/lib/rules";
 import { getSessionUser } from "@/lib/session";
 
 export default async function Home() {
@@ -73,6 +74,9 @@ export default async function Home() {
                   {tier.items} items per month
                 </p>
                 <p className="mt-3 text-sm text-stone">{tier.blurb}</p>
+                <p className="mt-2 text-xs font-medium text-stone">
+                  {shippingNoteForTier(tier.id)}
+                </p>
               </div>
             ))}
           </div>

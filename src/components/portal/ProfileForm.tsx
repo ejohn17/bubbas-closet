@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  RULES,
   SHIPPING_COUNTRY_LABELS,
-  normalizeShippingCountry,
+  formatShippingCountries,
+  isCountryAllowedForTier,
+  resolveShippingCountry,
+  shippingCountriesForTier,
 } from "@/lib/rules";
 import type { Address, SizeProfile } from "@/lib/types";
 
@@ -16,11 +18,20 @@ import type { Address, SizeProfile } from "@/lib/types";
 export function ProfileForm({
   sizeProfile,
   shippingAddress,
+  tierId,
+  tierName,
 }: {
   sizeProfile?: SizeProfile;
   shippingAddress?: Address | null;
+  tierId?: string | null;
+  tierName?: string | null;
 }) {
   const router = useRouter();
+  const allowedCountries = shippingCountriesForTier(tierId);
+  const countryNeedsUpdate = Boolean(
+    shippingAddress?.line1 &&
+      !isCountryAllowedForTier(shippingAddress.country, tierId),
+  );
   const [sizes, setSizes] = useState<SizeProfile>(sizeProfile ?? {});
   const [address, setAddress] = useState<Address>(() => ({
     name: shippingAddress?.name ?? "",
@@ -29,7 +40,7 @@ export function ProfileForm({
     city: shippingAddress?.city ?? "",
     region: shippingAddress?.region ?? "",
     postalCode: shippingAddress?.postalCode ?? "",
-    country: normalizeShippingCountry(shippingAddress?.country) ?? "US",
+    country: resolveShippingCountry(shippingAddress?.country, tierId),
   }));
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -112,8 +123,19 @@ export function ProfileForm({
       <fieldset>
         <legend className="text-lg font-semibold">Shipping address</legend>
         <p className="mt-1 text-sm text-stone">
-          Where your box goes each month. Shipping is included both ways.
+          Where your box goes each month. Shipping is included both ways
+          {tierName
+            ? `. ${tierName} ships to ${formatShippingCountries(allowedCountries)}${allowedCountries.length === 1 ? " only" : ""}`
+            : ""}
+          .
         </p>
+        {countryNeedsUpdate ? (
+          <p className="mt-3 text-sm text-red-700">
+            Your saved address isn&apos;t in{" "}
+            {formatShippingCountries(allowedCountries)}. Please enter a new
+            address before confirming a box.
+          </p>
+        ) : null}
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
@@ -207,7 +229,7 @@ export function ProfileForm({
               }
               autoComplete="country"
             >
-              {RULES.shippingCountries.map((code) => (
+              {allowedCountries.map((code) => (
                 <option key={code} value={code}>
                   {SHIPPING_COUNTRY_LABELS[code]}
                 </option>

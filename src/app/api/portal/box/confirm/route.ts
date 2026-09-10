@@ -3,7 +3,11 @@ import { DomainError } from "@/lib/db/base";
 import { confirmBox } from "@/lib/db/picks";
 import { requireEntitledUser } from "@/lib/portal";
 import { sendPickConfirmation } from "@/lib/email";
-import { RULES } from "@/lib/rules";
+import {
+  isCountryAllowedForTier,
+  RULES,
+  unsupportedCountryMessage,
+} from "@/lib/rules";
 
 /**
  * Confirms the box for this billing cycle: holds become a pending pick order,
@@ -24,6 +28,12 @@ export async function POST() {
       throw new DomainError(
         "missing_address",
         "Add a shipping address in your account before confirming.",
+      );
+    }
+    if (!isCountryAllowedForTier(address.country, sub.tierId)) {
+      throw new DomainError(
+        "unsupported_country",
+        `${unsupportedCountryMessage(sub.tierId)} Update your address in your account before confirming.`,
       );
     }
 
