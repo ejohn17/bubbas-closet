@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { conditionLabel } from "@/lib/rules";
+import { conditionLabel, RULES } from "@/lib/rules";
 import type { CatalogSize } from "@/lib/catalog";
 
 /**
@@ -70,7 +70,9 @@ export function AddToBoxControls({
   if (added) {
     return (
       <div className="flex flex-wrap items-center gap-3">
-        <p className="text-sm font-medium text-accent-dark">In your box</p>
+        <p className="text-sm font-medium text-accent-dark">
+          In your box · saved for {RULES.holdTtlMinutes} min
+        </p>
         <Link href="/portal/box" className="btn-outline btn-sm">
           Review box
         </Link>

@@ -3,7 +3,7 @@ import { releaseExpiredHolds } from "@/lib/db/holds";
 import { assertCronAuthorized } from "@/lib/cron";
 
 /**
- * Returns garments whose 45-minute hold lapsed back to the closet.
+ * Returns garments whose hold TTL lapsed back to the closet.
  * Suggested schedule: every 5 minutes.
  */
 export async function POST(request: Request) {

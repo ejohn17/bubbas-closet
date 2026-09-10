@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ProductImage } from "@/components/ProductImage";
-import { conditionLabel } from "@/lib/rules";
+import { useHoldClock } from "@/components/portal/HoldBanner";
+import { conditionLabel, RULES } from "@/lib/rules";
 import type { UnitCondition } from "@/lib/types";
 
 export type BoxHold = {
@@ -32,22 +33,16 @@ export function BoxSummary({
   addressHint?: string | null;
 }) {
   const router = useRouter();
-  const [items, setItems] = useState(holds);
+  const [removedIds, setRemovedIds] = useState<Set<string>>(() => new Set());
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
-  const [now, setNow] = useState(() => Date.now());
 
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(timer);
-  }, []);
+  const items = holds.filter((item) => !removedIds.has(item.id));
 
   const soonest = items.length
     ? Math.min(...items.map((i) => i.expiresAt))
     : null;
-  const minutesLeft = soonest
-    ? Math.max(0, Math.round((soonest - now) / 60_000))
-    : null;
+  const { expired, urgent, label } = useHoldClock(soonest);
 
   async function remove(holdId: string) {
     setError(null);
@@ -64,7 +59,7 @@ export function BoxSummary({
         setError(body?.message ?? "Could not remove that piece.");
         return;
       }
-      setItems((prev) => prev.filter((i) => i.id !== holdId));
+      setRemovedIds((prev) => new Set(prev).add(holdId));
       router.refresh();
     } catch {
       setError("Network error. Please try again.");
@@ -105,6 +100,43 @@ export function BoxSummary({
 
   return (
     <div>
+      <div
+        className={`mb-6 rounded-3xl border px-5 py-4 ${
+          expired
+            ? "border-red-200 bg-red-50 text-red-900"
+            : urgent
+              ? "border-amber-200 bg-amber-50 text-amber-950"
+              : "border-line bg-card text-ink"
+        }`}
+      >
+        {expired ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="font-medium">
+              Your reservation ran out. Refresh to rebuild your box — these
+              pieces may already be back in the closet.
+            </p>
+            <button
+              type="button"
+              className="btn-outline btn-sm"
+              onClick={() => router.refresh()}
+            >
+              Refresh
+            </button>
+          </div>
+        ) : (
+          <>
+            <p className="font-medium">
+              {urgent ? "Hurry — your box is reserved for " : "Your box is reserved for "}
+              <span className="tabular-nums">{label}</span>
+            </p>
+            <p className="mt-1 text-sm opacity-80">
+              Adding another piece restarts the {RULES.holdTtlMinutes}-minute
+              timer. Confirm before these garments go back to the closet.
+            </p>
+          </>
+        )}
+      </div>
+
       <div className="card divide-y divide-line">
         {items.map((item) => (
           <div key={item.id} className="flex items-center gap-4 p-4">
@@ -135,21 +167,13 @@ export function BoxSummary({
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
         <p className="text-sm text-stone">
           {items.length} of {itemLimit} items
-          {minutesLeft !== null ? (
-            <>
-              {" · "}
-              {minutesLeft > 0
-                ? `held for another ${minutesLeft} min`
-                : "holds have expired — refresh to rebuild your box"}
-            </>
-          ) : null}
         </p>
 
         <button
           type="button"
           className="btn-primary"
           onClick={confirm}
-          disabled={pending !== null || !hasAddress}
+          disabled={pending !== null || !hasAddress || expired}
         >
           {pending === "confirm" ? "Confirming…" : "Confirm my box"}
         </button>

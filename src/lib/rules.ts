@@ -13,7 +13,7 @@ import type { UnitCondition } from "@/lib/types";
  */
 export const RULES = {
   /** How long a garment stays reserved while a member builds their box (C.1). */
-  holdTtlMinutes: 45,
+  holdTtlMinutes: 20,
 
   /** Days after the cycle ends before a return counts as overdue (C.4). */
   returnGraceDays: 3,

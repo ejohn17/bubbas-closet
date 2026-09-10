@@ -4,7 +4,7 @@ import { getEntitlement } from "@/lib/db/subscriptions";
 import { listHolds } from "@/lib/db/holds";
 import { findPickForCycle } from "@/lib/db/picks";
 import { BoxSummary } from "@/components/portal/BoxSummary";
-import { isCountryAllowedForTier } from "@/lib/rules";
+import { isCountryAllowedForTier, RULES } from "@/lib/rules";
 
 export const metadata = { title: "My box" };
 
@@ -32,8 +32,8 @@ export default async function BoxPage() {
     <div className="mx-auto max-w-2xl">
       <h1 className="text-3xl font-semibold tracking-tight">My box</h1>
       <p className="mt-2 mb-8 text-stone">
-        Everything here is reserved for you. Confirm when you&apos;re happy with
-        your picks and we&apos;ll get it shipped.
+        Everything here is reserved for {RULES.holdTtlMinutes} minutes. Confirm
+        when you&apos;re happy with your picks and we&apos;ll get it shipped.
       </p>
 
       {cyclePick ? (

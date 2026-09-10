@@ -9,7 +9,8 @@ import { isRentableCondition, RULES } from "@/lib/rules";
  *
  * Reserving is done inside a Firestore transaction so two members can never
  * take the same physical garment, and the tier limit is enforced here rather
- * than in the UI. Holds expire after RULES.holdTtlMinutes and are swept by
+ * than in the UI. Holds expire after RULES.holdTtlMinutes; adding another
+ * piece restarts the window for the whole box. Expired holds are swept by
  * /api/cron/release-holds.
  */
 
@@ -172,6 +173,17 @@ async function reserveUnit(input: {
       createdAt: at,
       expiresAt,
     };
+
+    // Adding a piece restarts the window for the whole box so the UI can
+    // show one countdown and later picks don't outlive the first ones.
+    for (const existing of liveHolds) {
+      tx.update(db.collection(COL.holds).doc(existing.id), { expiresAt });
+      tx.set(
+        db.collection(COL.units).doc(existing.unitId),
+        { holdExpiresAt: expiresAt, updatedAt: at },
+        { merge: true },
+      );
+    }
 
     tx.set(holdRef, clean(hold));
     tx.set(

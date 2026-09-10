@@ -8,6 +8,7 @@ import { listHolds } from "@/lib/db/holds";
 import { findPickForCycle } from "@/lib/db/picks";
 import { Catalog } from "@/components/portal/Catalog";
 import { catalogSizes, type CatalogItem } from "@/lib/catalog";
+import { RULES } from "@/lib/rules";
 
 export const metadata = { title: "The closet" };
 
@@ -60,8 +61,8 @@ export default async function PortalHome({
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">The closet</h1>
           <p className="mt-2 text-stone">
-            Everything here is available right now. Adding a piece holds it for
-            you while you finish your box.
+            Everything here is available right now. Adding a piece holds it for{" "}
+            {RULES.holdTtlMinutes} minutes while you finish your box.
           </p>
         </div>
         {holds.length > 0 ? (

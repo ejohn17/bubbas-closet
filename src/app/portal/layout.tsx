@@ -4,9 +4,10 @@ import { redirect } from "next/navigation";
 import { BRAND } from "@/lib/config";
 import { requireUser } from "@/lib/session";
 import { getEntitlement } from "@/lib/db/subscriptions";
-import { listHolds } from "@/lib/db/holds";
+import { getBox } from "@/lib/db/holds";
 import { getTier } from "@/lib/tiers";
 import { PortalNav } from "@/components/portal/PortalNav";
+import { HoldBanner } from "@/components/portal/HoldBanner";
 import { SignOutButton } from "@/components/SignOutButton";
 
 // Member-specific data on every request; never prerendered.
@@ -28,34 +29,39 @@ export default async function PortalLayout({
     redirect(entitlement.subscription ? "/portal-paused" : "/subscribe");
   }
 
-  const holds = await listHolds(user.uid);
+  const box = await getBox(user.uid, entitlement.itemLimit);
   const tier = getTier(entitlement.subscription?.tierId ?? "");
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="border-b border-line bg-card/70">
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-5">
-          <div className="flex items-center gap-6">
-            <Link href="/portal" className="text-lg font-semibold tracking-tight">
-              {BRAND.name}
-            </Link>
-            <PortalNav boxCount={holds.length} />
-          </div>
-
-          <div className="flex items-center gap-4 text-sm">
-            <span className="text-stone">
-              {tier ? `${tier.name} · ` : ""}
-              {holds.length} of {entitlement.itemLimit} picked
-            </span>
-            {user.isAdmin ? (
-              <Link href="/admin" className="text-stone transition hover:text-ink">
-                Admin
+      <div className="sticky top-0 z-30">
+        <header className="border-b border-line bg-card/95 backdrop-blur">
+          <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-5">
+            <div className="flex items-center gap-6">
+              <Link href="/portal" className="text-lg font-semibold tracking-tight">
+                {BRAND.name}
               </Link>
-            ) : null}
-            <SignOutButton />
+              <PortalNav boxCount={box.holds.length} />
+            </div>
+
+            <div className="flex items-center gap-4 text-sm">
+              <span className="text-stone">
+                {tier ? `${tier.name} · ` : ""}
+                {box.holds.length} of {entitlement.itemLimit} picked
+              </span>
+              {user.isAdmin ? (
+                <Link href="/admin" className="text-stone transition hover:text-ink">
+                  Admin
+                </Link>
+              ) : null}
+              <SignOutButton />
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+        {box.expiresAt ? (
+          <HoldBanner expiresAt={box.expiresAt} itemCount={box.holds.length} />
+        ) : null}
+      </div>
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">{children}</main>
     </div>

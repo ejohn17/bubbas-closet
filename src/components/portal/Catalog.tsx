@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ProductImage } from "@/components/ProductImage";
 import { FavoriteButton } from "@/components/portal/FavoriteButton";
 import { AddToBoxControls } from "@/components/portal/AddToBoxControls";
+import { CatalogCarousel } from "@/components/portal/CatalogCarousel";
 import { bestCondition, conditionLabel } from "@/lib/rules";
 import type { CatalogItem } from "@/lib/catalog";
 
@@ -114,7 +114,7 @@ export function Catalog({
         </p>
       ) : (
         <ul className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {visible.map((item) => {
+          {visible.map((item, cardIndex) => {
             const isInBox = inBox.has(item.id);
             const href = `/portal/item/${item.id}`;
             const condition =
@@ -130,18 +130,12 @@ export function Catalog({
                 className="card overflow-hidden transition hover:border-accent/60"
               >
                 <div className="relative">
-                  <Link href={href} className="group block">
-                    <ProductImage
-                      src={item.images[0]}
-                      alt={item.title}
-                      className="h-64 w-full transition duration-300 group-hover:scale-[1.03]"
-                    />
-                    {item.images.length > 1 ? (
-                      <span className="absolute bottom-3 left-3 rounded-full bg-card/90 px-2.5 py-1 text-xs font-medium text-stone">
-                        {item.images.length} photos
-                      </span>
-                    ) : null}
-                  </Link>
+                  <CatalogCarousel
+                    images={item.images}
+                    alt={item.title}
+                    href={href}
+                    offsetMs={(cardIndex % 7) * 350}
+                  />
                   <FavoriteButton
                     productId={item.id}
                     favorited={item.favorited}

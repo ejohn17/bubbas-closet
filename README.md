@@ -81,7 +81,8 @@ in [`src/lib/rules.ts`](src/lib/rules.ts); tier pricing and item limits live in
   garment with its own status (`available`, `reserved`, `out`, `cleaning`,
   `retired`). Members browse styles, but a specific unit is what gets assigned.
 - **Reserve on add.** Adding a piece runs a Firestore transaction that claims an
-  available unit and creates a *hold* that expires after 45 minutes. A member's
+  available unit and creates a *hold* that expires after 20 minutes. Adding
+  another piece restarts that window for the whole box. A member's
   live holds are their box, and the tier limit is enforced there — never in the
   browser.
 - **Condition grades.** Only `new`, `excellent`, and `good` garments are offered;

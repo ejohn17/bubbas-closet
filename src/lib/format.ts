@@ -39,3 +39,12 @@ export function titleCase(value: string): string {
     .replace(/_/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
+
+/** Remaining hold time as m:ss, e.g. "19:42". */
+export function formatHoldCountdown(expiresAt: number, now = Date.now()): string {
+  const remaining = Math.max(0, expiresAt - now);
+  const totalSeconds = Math.ceil(remaining / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
