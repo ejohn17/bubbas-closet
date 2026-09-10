@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { syncSubscription } from "@/lib/billing";
 import { setPendingTier } from "@/lib/db/subscriptions";
 import { updateShippingAddress } from "@/lib/db/users";
+import { normalizeShippingCountry } from "@/lib/rules";
 import { requireStripe } from "@/lib/stripe";
 import type { Address } from "@/lib/types";
 
@@ -139,6 +140,6 @@ function shippingAddressFrom(
     city: address.city,
     region: address.state ?? "",
     postalCode: address.postal_code ?? "",
-    country: address.country ?? "US",
+    country: normalizeShippingCountry(address.country) ?? "US",
   };
 }

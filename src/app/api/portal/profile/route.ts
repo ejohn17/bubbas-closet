@@ -1,6 +1,7 @@
 import { ok, readJson, requireApiUser, toErrorResponse } from "@/lib/api";
 import { DomainError } from "@/lib/db/base";
 import { updateShippingAddress, updateSizeProfile } from "@/lib/db/users";
+import { normalizeShippingCountry } from "@/lib/rules";
 import type { Address, SizeProfile } from "@/lib/types";
 
 /** Saves the member's size profile and/or shipping address. */
@@ -34,6 +35,13 @@ export async function PUT(request: Request) {
           "Name, street address, and city are required.",
         );
       }
+      const country = normalizeShippingCountry(addr.country);
+      if (!country) {
+        throw new DomainError(
+          "unsupported_country",
+          "We currently ship to the United States and Canada.",
+        );
+      }
       await updateShippingAddress(user.uid, {
         name: addr.name.trim(),
         line1: addr.line1.trim(),
@@ -41,7 +49,7 @@ export async function PUT(request: Request) {
         city: addr.city.trim(),
         region: addr.region?.trim() ?? "",
         postalCode: addr.postalCode?.trim() ?? "",
-        country: addr.country?.trim() || "US",
+        country,
       });
     }
 

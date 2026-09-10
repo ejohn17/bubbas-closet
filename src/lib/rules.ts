@@ -25,12 +25,46 @@ export const RULES = {
   currency: "usd",
 
   /**
+   * Countries Stripe Checkout and the portal address form will accept.
+   * ISO 3166-1 alpha-2, as Stripe's shipping_address_collection requires.
+   */
+  shippingCountries: ["US", "CA"] as const,
+
+  /**
    * Conditions a member can rent. Anything outside this list is withheld from
    * the catalogue, and a garment that comes back in one of those conditions is
    * retired rather than cleaned and re-listed (C.6).
    */
   rentableConditions: ["new", "excellent", "good"] as UnitCondition[],
 } as const;
+
+export type ShippingCountry = (typeof RULES.shippingCountries)[number];
+
+export const SHIPPING_COUNTRY_LABELS: Record<ShippingCountry, string> = {
+  US: "United States",
+  CA: "Canada",
+};
+
+const SHIPPING_COUNTRY_ALIASES: Record<string, ShippingCountry> = {
+  USA: "US",
+  "UNITED STATES": "US",
+  "UNITED STATES OF AMERICA": "US",
+  CANADA: "CA",
+};
+
+export function isShippingCountry(value: string): value is ShippingCountry {
+  return (RULES.shippingCountries as readonly string[]).includes(value);
+}
+
+/** Normalizes a country string to US/CA, or null if we don't ship there. */
+export function normalizeShippingCountry(
+  value: string | null | undefined,
+): ShippingCountry | null {
+  const code = value?.trim().toUpperCase();
+  if (!code) return null;
+  if (isShippingCountry(code)) return code;
+  return SHIPPING_COUNTRY_ALIASES[code] ?? null;
+}
 
 /** Ordered best to worst, for picking the best available garment to advertise. */
 export const CONDITION_ORDER: UnitCondition[] = [

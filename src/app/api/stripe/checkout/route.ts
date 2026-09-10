@@ -2,6 +2,7 @@ import { ok, readJson, requireApiUser, toErrorResponse } from "@/lib/api";
 import { DomainError } from "@/lib/db/base";
 import { getEntitlement } from "@/lib/db/subscriptions";
 import { ensureStripeCustomer } from "@/lib/billing";
+import { RULES } from "@/lib/rules";
 import { requireStripe, siteUrl } from "@/lib/stripe";
 import { priceIdForTier } from "@/lib/tiers";
 
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
       billing_address_collection: "auto",
       // Shipping is included both ways, so collect the address at signup.
       shipping_address_collection: {
-        allowed_countries: ["US"],
+        allowed_countries: [...RULES.shippingCountries],
       },
       subscription_data: {
         metadata: { uid: user.uid, tierId },

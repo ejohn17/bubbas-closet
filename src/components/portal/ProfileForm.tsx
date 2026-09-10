@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  RULES,
+  SHIPPING_COUNTRY_LABELS,
+  normalizeShippingCountry,
+} from "@/lib/rules";
 import type { Address, SizeProfile } from "@/lib/types";
 
 /**
@@ -17,17 +22,15 @@ export function ProfileForm({
 }) {
   const router = useRouter();
   const [sizes, setSizes] = useState<SizeProfile>(sizeProfile ?? {});
-  const [address, setAddress] = useState<Address>(
-    shippingAddress ?? {
-      name: "",
-      line1: "",
-      line2: "",
-      city: "",
-      region: "",
-      postalCode: "",
-      country: "US",
-    },
-  );
+  const [address, setAddress] = useState<Address>(() => ({
+    name: shippingAddress?.name ?? "",
+    line1: shippingAddress?.line1 ?? "",
+    line2: shippingAddress?.line2 ?? "",
+    city: shippingAddress?.city ?? "",
+    region: shippingAddress?.region ?? "",
+    postalCode: shippingAddress?.postalCode ?? "",
+    country: normalizeShippingCountry(shippingAddress?.country) ?? "US",
+  }));
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -166,7 +169,7 @@ export function ProfileForm({
           </div>
           <div>
             <label className="label" htmlFor="addr-region">
-              State
+              State / province
             </label>
             <input
               id="addr-region"
@@ -178,7 +181,7 @@ export function ProfileForm({
           </div>
           <div>
             <label className="label" htmlFor="addr-postal">
-              ZIP
+              ZIP / postal code
             </label>
             <input
               id="addr-postal"
@@ -194,13 +197,22 @@ export function ProfileForm({
             <label className="label" htmlFor="addr-country">
               Country
             </label>
-            <input
+            <select
               id="addr-country"
               className="input"
+              required
               value={address.country}
-              onChange={(e) => setAddress({ ...address, country: e.target.value })}
+              onChange={(e) =>
+                setAddress({ ...address, country: e.target.value })
+              }
               autoComplete="country"
-            />
+            >
+              {RULES.shippingCountries.map((code) => (
+                <option key={code} value={code}>
+                  {SHIPPING_COUNTRY_LABELS[code]}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </fieldset>

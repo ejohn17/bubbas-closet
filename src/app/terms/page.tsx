@@ -97,7 +97,7 @@ export default function TermsPage() {
 
           <h2>5. Shipping</h2>
           <p>
-            We ship within the United States only. Outbound shipping and a
+            We ship to the United States and Canada. Outbound shipping and a
             prepaid return label are included in your membership. You&apos;re
             responsible for keeping your shipping address current in your
             account; we aren&apos;t able to reroute a box once it&apos;s on its
