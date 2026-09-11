@@ -4,6 +4,7 @@ import type { UnitCondition, UnitDoc, UnitStatus } from "@/lib/types";
 import { clean, COL, docTo, docsTo, DomainError, nowMs } from "@/lib/db/base";
 import { getProduct } from "@/lib/db/products";
 import { bestCondition, isRentableCondition } from "@/lib/rules";
+import { compareSizes, sortSizes } from "@/lib/sizes";
 
 export async function getUnit(id: string): Promise<UnitDoc | null> {
   const snap = await requireDb().collection(COL.units).doc(id).get();
@@ -49,7 +50,7 @@ export async function listUnits(options?: {
   return units.sort(
     (a, b) =>
       a.productTitle.localeCompare(b.productTitle) ||
-      a.size.localeCompare(b.size) ||
+      compareSizes(a.size, b.size) ||
       a.createdAt - b.createdAt,
   );
 }
@@ -124,7 +125,7 @@ export async function createUnits(input: {
     await db
       .collection(COL.products)
       .doc(product.id)
-      .set({ sizes: [...product.sizes, size], updatedAt: ts }, { merge: true });
+      .set({ sizes: sortSizes([...product.sizes, size]), updatedAt: ts }, { merge: true });
   }
 
   return created;

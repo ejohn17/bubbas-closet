@@ -1,7 +1,7 @@
 import { BRAND } from "@/lib/config";
 import type { PickDoc } from "@/lib/types";
 import { siteUrl } from "@/lib/stripe";
-import { outboundShippingIsFree } from "@/lib/rules";
+import { outboundShippingIsFree, RULES } from "@/lib/rules";
 
 /**
  * Transactional email via Resend (no SDK dependency).
@@ -148,8 +148,9 @@ export async function sendOverdueNotice(pick: PickDoc): Promise<void> {
     text:
       `Your return was due ${formatDate(pick.dueAt)} and these pieces haven't reached us yet:\n\n` +
       `${outstanding.map((i) => `  • ${i.productTitle} (size ${i.size})`).join("\n")}\n\n` +
-      `Sending them back in the next few days avoids a late fee. If something's ` +
-      `gone missing, just reply to this email and we'll sort it out.\n\n` +
+      `Sending them back within ${RULES.lateFeeAfterDays} days of the due date ` +
+      `avoids a one-time late fee of up to $${RULES.lateFeeCents / 100} per item. ` +
+      `If something's gone missing, just reply to this email and we'll sort it out.\n\n` +
       `— The ${BRAND.name} team`,
   });
 }

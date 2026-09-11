@@ -6,6 +6,7 @@ import { FavoriteButton } from "@/components/portal/FavoriteButton";
 import { AddToBoxControls } from "@/components/portal/AddToBoxControls";
 import { CatalogCarousel } from "@/components/portal/CatalogCarousel";
 import { bestCondition, conditionLabel } from "@/lib/rules";
+import { compareSizes } from "@/lib/sizes";
 import type { CatalogItem } from "@/lib/catalog";
 
 export type { CatalogItem };
@@ -40,9 +41,7 @@ export function Catalog({
   const allSizes = useMemo(() => {
     const set = new Set<string>();
     for (const item of items) for (const s of item.sizes) set.add(s.size);
-    return [...set].sort((a, b) =>
-      a.localeCompare(b, undefined, { numeric: true }),
-    );
+    return [...set].sort(compareSizes);
   }, [items]);
 
   const visible = useMemo(() => {

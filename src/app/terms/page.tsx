@@ -11,8 +11,8 @@ import {
 
 /**
  * Draft rental terms. Numbers come from config so the copy can't drift from
- * what the app enforces. Fee amounts marked [amount] and this whole document
- * need the client's sign-off and a lawyer's review before launch.
+ * what the app enforces. This whole document still needs a lawyer's review
+ * before launch.
  */
 
 export const metadata: Metadata = {
@@ -138,11 +138,13 @@ export default function TermsPage() {
 
           <h2>7. Late fees</h2>
           <p>
-            Once the grace period passes, we may charge a late fee of [amount]
-            per garment per week to the card on file. We&apos;ll email you
+            Once a garment is more than {RULES.lateFeeAfterDays} days past due,
+            we may charge a one-time late fee of up to{" "}
+            {`$${RULES.lateFeeCents / 100}`} per item to the card on file. That
+            fee is charged once per garment, not per week. We&apos;ll email you
             before charging anything, and every fee appears on a Stripe receipt.
-            If a garment is more than [number] days overdue, we may treat it as
-            lost and charge the replacement fee below instead.
+            If a garment doesn&apos;t come back, we may charge the replacement
+            fee below instead.
           </p>
 
           <h2>8. Care, damage, and loss</h2>
@@ -154,11 +156,10 @@ export default function TermsPage() {
           </p>
           <p>
             If a garment comes back damaged beyond what we can clean or repair,
-            or doesn&apos;t come back at all, we may charge a replacement fee of
-            up to [amount or percentage of retail value] for that piece. We
-            document the condition of every garment before it ships, and
-            we&apos;ll share that record with you if a charge is ever in
-            question.
+            or doesn&apos;t come back at all, we may charge a replacement fee of{" "}
+            {`$${RULES.replacementFeeCents / 100}`} for that piece. We document
+            the condition of every garment before it ships, and we&apos;ll share
+            that record with you if a charge is ever in question.
           </p>
 
           <h2>9. How you may use the garments</h2>

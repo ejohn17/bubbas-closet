@@ -1,4 +1,5 @@
 import type { UnitCondition } from "@/lib/types";
+import { compareSizes } from "@/lib/sizes";
 
 export type CatalogSize = {
   size: string;
@@ -28,8 +29,6 @@ export function catalogSizes(availability?: {
       count: info.count,
       condition: info.condition,
     }))
-    .sort((a, b) =>
-      a.size.localeCompare(b.size, undefined, { numeric: true }),
-    );
+    .sort((a, b) => compareSizes(a.size, b.size));
 }
 

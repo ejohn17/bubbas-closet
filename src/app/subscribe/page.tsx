@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
+import { SizeRangeNotice } from "@/components/SizeRangeNotice";
 import { TierPicker, type TierOption } from "@/components/TierPicker";
 import { BRAND, STEPS, TIERS } from "@/lib/config";
 import { getSessionUser } from "@/lib/session";
@@ -39,9 +40,10 @@ export default async function SubscribePage({
           Choose your membership
         </h1>
         <p className="mt-3 max-w-xl text-stone">
-          Pick the plan that matches how often you like to switch things up. You
-          can change plans later from your account.
+          Pick the plan that matches how often you like to switch up their
+          clothes. You can change plans later from your account.
         </p>
+        <SizeRangeNotice className="mt-6 max-w-xl" />
 
         {cancelled ? (
           <p className="mt-6 rounded-2xl border border-line bg-card px-4 py-3 text-sm text-stone">

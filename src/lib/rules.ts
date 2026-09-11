@@ -18,6 +18,15 @@ export const RULES = {
   /** Days after the cycle ends before a return counts as overdue (C.4). */
   returnGraceDays: 3,
 
+  /** Days past the due date before a late fee may be charged (C.10). */
+  lateFeeAfterDays: 7,
+
+  /** One-time late fee cap per overdue garment, in cents (C.10). */
+  lateFeeCents: 500,
+
+  /** Replacement charge when a garment is damaged beyond repair or lost (C.10). */
+  replacementFeeCents: 1000,
+
   /** Days before the due date that a return reminder goes out. */
   reminderDaysBefore: 3,
 

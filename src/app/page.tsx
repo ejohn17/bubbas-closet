@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
-import { BRAND, TIERS, STEPS } from "@/lib/config";
+import { SizeRangeNotice } from "@/components/SizeRangeNotice";
+import { BRAND, SIZE_RANGE, TIERS, STEPS } from "@/lib/config";
 import { outboundShippingShortNote, shippingNoteForTier } from "@/lib/rules";
 import { getSessionUser } from "@/lib/session";
 
@@ -16,6 +17,7 @@ export default async function Home() {
           {BRAND.tagline}.
         </h1>
         <p className="mt-5 max-w-xl text-lg text-stone">{BRAND.description}</p>
+        <SizeRangeNotice className="mt-6 max-w-xl" />
 
         <div className="mt-8 flex flex-wrap items-center gap-3">
           {user ? (
@@ -42,7 +44,8 @@ export default async function Home() {
           </h2>
           <p className="mt-2 max-w-xl text-stone">
             Choose the monthly plan that matches how much you like to switch
-            things up. More items, more variety.
+            up their clothes. More items, more variety — in sizes{" "}
+            {SIZE_RANGE.label}.
           </p>
           <Link href="/subscribe" className="link mt-4 inline-block text-sm">
             Compare memberships
@@ -120,11 +123,11 @@ export default async function Home() {
           ) : (
             <>
               <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                Ready for a rotating wardrobe?
+                Ready for a rotating kids&apos; closet?
               </h2>
               <p className="mx-auto mt-2 max-w-md text-stone">
-                Pick a plan, build your first box, and swap for something new
-                next month.
+                Pick a plan, build their first box of kids&apos; clothes, and
+                swap for something new next month.
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <Link href="/subscribe" className="btn-primary">

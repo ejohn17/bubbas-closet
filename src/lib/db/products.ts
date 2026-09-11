@@ -1,6 +1,7 @@
 import { requireDb } from "@/lib/firebase-admin";
 import type { ProductDoc } from "@/lib/types";
 import { clean, COL, docTo, docsTo, DomainError, nowMs } from "@/lib/db/base";
+import { sortSizes } from "@/lib/sizes";
 
 export type ProductInput = {
   title: string;
@@ -74,7 +75,7 @@ export async function createProduct(input: ProductInput): Promise<ProductDoc> {
     category: input.category?.trim() || undefined,
     tags: normalizeList(input.tags),
     images: normalizeList(input.images),
-    sizes: normalizeList(input.sizes),
+    sizes: sortSizes(normalizeList(input.sizes)),
     retailValueCents: input.retailValueCents,
     active: input.active ?? true,
     createdAt: ts,
@@ -98,7 +99,7 @@ export async function updateProduct(
     category: input.category?.trim(),
     tags: input.tags ? normalizeList(input.tags) : undefined,
     images: input.images ? normalizeList(input.images) : undefined,
-    sizes: input.sizes ? normalizeList(input.sizes) : undefined,
+    sizes: input.sizes ? sortSizes(normalizeList(input.sizes)) : undefined,
     retailValueCents: input.retailValueCents,
     active: input.active,
     updatedAt: nowMs(),

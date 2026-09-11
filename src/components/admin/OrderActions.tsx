@@ -8,6 +8,7 @@ import {
   CONDITION_ORDER,
   conditionAdminLabel,
   outboundShippingIsFree,
+  RULES,
 } from "@/lib/rules";
 import { returnLabelDraft } from "@/lib/return-label-email";
 
@@ -332,7 +333,10 @@ export function OrderActions({
         <section className="card p-5">
           <h2 className="font-semibold">Charge a fee</h2>
           <p className="mt-1 text-sm text-stone">
-            Billed to the member&apos;s saved card through Stripe.
+            Billed to the member&apos;s saved card through Stripe. Policy:
+            late fee up to {`$${RULES.lateFeeCents / 100}`}/item once after{" "}
+            {RULES.lateFeeAfterDays} days past due; replacement{" "}
+            {`$${RULES.replacementFeeCents / 100}`}/item.
             {feeCents ? ` Fees so far: ${formatMoney(feeCents)}.` : ""}
             {shippingCents
               ? ` Shipping charged: ${formatMoney(shippingCents)}.`
@@ -350,7 +354,7 @@ export function OrderActions({
                 inputMode="decimal"
                 value={feeAmount}
                 onChange={(e) => setFeeAmount(e.target.value)}
-                placeholder="25"
+                placeholder={String(RULES.lateFeeCents / 100)}
               />
             </div>
             <div className="min-w-48 flex-1">
