@@ -23,7 +23,7 @@ runConfig:
 env:
   # --- Public site config ---
   - variable: NEXT_PUBLIC_SITE_URL
-    value: "https://bubbas-closet-staging--bubbas-closet.us-east4.hosted.app/"
+    value: "https://mybubbascloset.ca"
     availability:
       - BUILD
       - RUNTIME
