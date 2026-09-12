@@ -1,36 +1,42 @@
-import { WaitlistForm } from "@/components/WaitlistForm";
-import { BRAND, TIERS, STEPS } from "@/lib/config";
+import Link from "next/link";
+import { SiteHeader } from "@/components/SiteHeader";
+import { SizeRangeNotice } from "@/components/SizeRangeNotice";
+import { BRAND, SIZE_RANGE, TIERS, STEPS } from "@/lib/config";
+import { outboundShippingShortNote, shippingNoteForTier } from "@/lib/rules";
+import { getSessionUser } from "@/lib/session";
 
-export default function Home() {
+export default async function Home() {
+  const user = await getSessionUser();
+
   return (
-    <main className="flex flex-col">
-      {/* Header */}
-      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
-        <span className="text-xl font-semibold tracking-tight">{BRAND.name}</span>
-        <a
-          href="#waitlist"
-          className="rounded-full border border-line px-4 py-2 text-sm font-medium text-ink transition hover:border-accent hover:text-accent-dark"
-        >
-          Join the waitlist
-        </a>
-      </header>
+    <main className="flex flex-1 flex-col">
+      <SiteHeader />
 
-      {/* Hero */}
       <section className="mx-auto w-full max-w-6xl px-6 pb-16 pt-10 sm:pt-16">
-        <p className="mb-4 text-sm font-medium uppercase tracking-widest text-accent-dark">
-          Coming soon
-        </p>
         <h1 className="max-w-3xl text-4xl font-semibold leading-tight tracking-tight sm:text-6xl">
           {BRAND.tagline}.
         </h1>
         <p className="mt-5 max-w-xl text-lg text-stone">{BRAND.description}</p>
+        <SizeRangeNotice className="mt-6 max-w-xl" />
 
-        <div id="waitlist" className="mt-8 max-w-xl scroll-mt-24">
-          <WaitlistForm source="hero" />
+        <div className="mt-8 flex flex-wrap items-center gap-3">
+          {user ? (
+            <Link href="/portal" className="btn-primary">
+              Go to my closet
+            </Link>
+          ) : (
+            <>
+              <Link href="/subscribe" className="btn-primary">
+                Become a member
+              </Link>
+              <Link href="/login" className="btn-outline">
+                Sign in
+              </Link>
+            </>
+          )}
         </div>
       </section>
 
-      {/* Tiers */}
       <section className="border-y border-line bg-card/60">
         <div className="mx-auto w-full max-w-6xl px-6 py-16">
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
@@ -38,8 +44,12 @@ export default function Home() {
           </h2>
           <p className="mt-2 max-w-xl text-stone">
             Choose the monthly plan that matches how much you like to switch
-            things up. More items, more variety.
+            up their clothes. More items, more variety — in sizes{" "}
+            {SIZE_RANGE.label}.
           </p>
+          <Link href="/subscribe" className="link mt-4 inline-block text-sm">
+            Compare memberships
+          </Link>
 
           <div className="mt-10 grid gap-6 md:grid-cols-3">
             {TIERS.map((tier) => (
@@ -67,13 +77,17 @@ export default function Home() {
                   {tier.items} items per month
                 </p>
                 <p className="mt-3 text-sm text-stone">{tier.blurb}</p>
+                <p className="mt-2 text-xs font-medium text-stone">
+                  {shippingNoteForTier(tier.id)}
+                  {" · "}
+                  {outboundShippingShortNote(tier.id)}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* How it works */}
       <section className="mx-auto w-full max-w-6xl px-6 py-16">
         <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
           How it works
@@ -91,33 +105,42 @@ export default function Home() {
         </ol>
       </section>
 
-      {/* Closing CTA */}
       <section className="border-t border-line bg-card/60">
         <div className="mx-auto w-full max-w-2xl px-6 py-16 text-center">
-          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Be first in line
-          </h2>
-          <p className="mx-auto mt-2 max-w-md text-stone">
-            Join the waitlist and we&apos;ll let you know the moment
-            memberships open.
-          </p>
-          <div className="mx-auto mt-8 max-w-xl">
-            <WaitlistForm source="footer" />
-          </div>
+          {user ? (
+            <>
+              <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                Your closet is waiting
+              </h2>
+              <p className="mx-auto mt-2 max-w-md text-stone">
+                Pick this month&apos;s pieces, check what&apos;s out with you, or
+                manage your membership.
+              </p>
+              <Link href="/portal" className="btn-primary mt-8">
+                Go to my closet
+              </Link>
+            </>
+          ) : (
+            <>
+              <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                Ready for a rotating kids&apos; closet?
+              </h2>
+              <p className="mx-auto mt-2 max-w-md text-stone">
+                Pick a plan, build their first box of kids&apos; clothes, and
+                swap for something new next month.
+              </p>
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                <Link href="/subscribe" className="btn-primary">
+                  Become a member
+                </Link>
+                <Link href="/login" className="btn-outline">
+                  Sign in
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="mx-auto w-full max-w-6xl px-6 py-10 text-sm text-stone">
-        <div className="flex flex-col items-center justify-between gap-2 border-t border-line pt-6 sm:flex-row">
-          <span>
-            © {new Date().getFullYear()} {BRAND.name}
-          </span>
-          <a href={`mailto:${BRAND.contactEmail}`} className="hover:text-ink">
-            {BRAND.contactEmail}
-          </a>
-        </div>
-      </footer>
     </main>
   );
 }

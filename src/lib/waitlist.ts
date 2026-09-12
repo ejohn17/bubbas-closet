@@ -61,6 +61,54 @@ async function addViaFirestore(input: WaitlistInput): Promise<WaitlistResult> {
   }
 }
 
+export async function markMailchimpSynced(email: string): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await db
+      .collection(COLLECTION)
+      .doc(email)
+      .set({ mailchimpSyncedAt: Date.now() }, { merge: true });
+  } catch {
+    // Sync bookkeeping is best-effort.
+  }
+}
+
+export type WaitlistEntry = {
+  email: string;
+  source?: string;
+  createdAt: number | null;
+  mailchimpSyncedAt: number | null;
+};
+
+/** Admin view of stored signups, newest first. */
+export async function listWaitlist(): Promise<WaitlistEntry[]> {
+  const db = getDb();
+  if (!db) return [];
+
+  const snap = await db.collection(COLLECTION).get();
+  return snap.docs
+    .map((doc) => {
+      const data = doc.data() as {
+        email?: string;
+        source?: string;
+        createdAt?: { toMillis?: () => number } | number;
+        mailchimpSyncedAt?: number;
+      };
+      const created = data.createdAt;
+      return {
+        email: data.email ?? doc.id,
+        source: data.source,
+        createdAt:
+          typeof created === "number"
+            ? created
+            : (created?.toMillis?.() ?? null),
+        mailchimpSyncedAt: data.mailchimpSyncedAt ?? null,
+      };
+    })
+    .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+}
+
 async function addViaLocalFile(input: WaitlistInput): Promise<WaitlistResult> {
   try {
     const dir = path.join(process.cwd(), ".data");

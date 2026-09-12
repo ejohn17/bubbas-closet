@@ -6,11 +6,18 @@
 
 export const BRAND = {
   name: "Bubbas Closet",
-  tagline: "Rent a rotating wardrobe, monthly",
+  tagline: "Rent a rotating children's wardrobe, monthly",
   description:
-    "A tiered subscription clothing rental. Pick a monthly membership, choose your pieces, wear them, and swap for something new next month.",
+    "A subscription clothing rental for kids. Pick a monthly membership, choose pieces that fit, wear them, and swap for something new next month.",
   // Placeholder — swap for the real launch email once available.
   contactEmail: "hello@bubbascloset.com",
+};
+
+/** Closet size range shown on the landing and subscribe pages. */
+export const SIZE_RANGE = {
+  label: "0M–3T",
+  min: "0 months",
+  max: "3T",
 };
 
 export type Tier = {
@@ -28,14 +35,14 @@ export const TIERS: Tier[] = [
     name: "Essential",
     priceMonthly: 50,
     items: 10,
-    blurb: "A curated capsule to refresh the everyday.",
+    blurb: "A curated capsule to refresh their everyday looks.",
   },
   {
     id: "signature",
     name: "Signature",
     priceMonthly: 90,
     items: 20,
-    blurb: "Room to mix occasion pieces with the staples.",
+    blurb: "Room to mix occasion outfits with the everyday staples.",
     featured: true,
   },
   {
@@ -43,7 +50,7 @@ export const TIERS: Tier[] = [
     name: "Premier",
     priceMonthly: 150,
     items: 40,
-    blurb: "A full rotating wardrobe for those who love variety.",
+    blurb: "A full rotating kids' closet for families who love variety.",
   },
 ];
 
@@ -59,11 +66,11 @@ export const STEPS: Step[] = [
   },
   {
     title: "Build your box",
-    body: "Browse the members-only portal and add pieces to your box, up to your tier's monthly item count.",
+    body: "Browse the members-only closet and add children's pieces to your box, up to your tier's monthly item count.",
   },
   {
     title: "Wear it all month",
-    body: "Your pieces ship to you. Enjoy them for the month with shipping included both ways.",
+    body: "Your pieces ship to you. Premier includes outbound shipping; other plans are billed the label cost. Return labels are always on us.",
   },
   {
     title: "Send back & swap",

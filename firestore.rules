@@ -1,11 +1,15 @@
 rules_version = '2';
 
-// The landing page writes to the waitlist using the Firebase Admin SDK
-// (server-side), which bypasses these rules. This file locks the collection
-// down so nothing can be read or written from untrusted clients.
+// Every read and write goes through Next.js server code using the Firebase
+// Admin SDK, which bypasses these rules. Nothing in this app talks to Firestore
+// directly from the browser, so the safe default is to deny all client access:
+// tier limits, holds, and subscription state must never be client-writable.
+//
+// The one exception worth knowing about: `users/{uid}.isAdmin` is set by hand in
+// the Firebase console and is what grants access to /admin.
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /waitlist/{doc} {
+    match /{document=**} {
       allow read, write: if false;
     }
   }
