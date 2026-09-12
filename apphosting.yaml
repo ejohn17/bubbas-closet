@@ -62,13 +62,13 @@ env:
     availability: [RUNTIME]
 
   - variable: STRIPE_PRICE_ESSENTIAL
-    value: "price_1UEIRJEOQUtgUmANKsQzCHEY"
+    value: "price_1UEeyDCrNQjymNqNoN5fOtEf"
     availability: [RUNTIME]
   - variable: STRIPE_PRICE_SIGNATURE
-    value: "price_1UEIQtEOQUtgUmANrw19eEjd"
+    value: "price_1UEeyBCrNQjymNqNhRNxS85n"
     availability: [RUNTIME]
   - variable: STRIPE_PRICE_PREMIER
-    value: "price_1UEIQOEOQUtgUmANyz1TM7dt"
+    value: "price_1UEeyACrNQjymNqNOIovkf3O"
     availability: [RUNTIME]
 
   # --- Transactional email (Resend) ---
@@ -88,7 +88,7 @@ env:
     availability: [RUNTIME]
   - variable: CRON_SECRET
     secret: CRON_SECRET
-  # --- Scheduled jobs (Cloud Scheduler calls /api/cron/*) ---
-  # - variable: CRON_SECRET
-  #   secret: CRON_SECRET
-  #   availability: [RUNTIME]
+  --- Scheduled jobs (Cloud Scheduler calls /api/cron/*) ---
+  - variable: CRON_SECRET
+    secret: CRON_SECRET
+    availability: [RUNTIME]
