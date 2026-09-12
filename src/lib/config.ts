@@ -1,7 +1,7 @@
 /**
  * Central brand + content config for the pre-launch landing page.
  * Edit copy, tiers, and steps here rather than in the components.
- * Tier pricing/limits mirror the confirmed plan: $50/10, $90/20, $150/40.
+ * Tier pricing/limits mirror the confirmed plan: $49.99/10, $89.99/20, $149.99/40.
  */
 
 export const BRAND = {
@@ -33,14 +33,14 @@ export const TIERS: Tier[] = [
   {
     id: "essential",
     name: "Essential",
-    priceMonthly: 50,
+    priceMonthly: 49.99,
     items: 10,
     blurb: "A curated capsule to refresh their everyday looks.",
   },
   {
     id: "signature",
     name: "Signature",
-    priceMonthly: 90,
+    priceMonthly: 89.99,
     items: 20,
     blurb: "Room to mix occasion outfits with the everyday staples.",
     featured: true,
@@ -48,7 +48,7 @@ export const TIERS: Tier[] = [
   {
     id: "premier",
     name: "Premier",
-    priceMonthly: 150,
+    priceMonthly: 149.99,
     items: 40,
     blurb: "A full rotating kids' closet for families who love variety.",
   },

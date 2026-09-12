@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { formatDollars } from "@/lib/format";
 import { outboundShippingShortNote, shippingNoteForTier } from "@/lib/rules";
 
 export type TierOption = {
@@ -113,7 +114,7 @@ export function TierPicker({
               <h3 className="text-lg font-semibold">{tier.name}</h3>
               <div className="mt-3 flex items-baseline gap-1">
                 <span className="text-3xl font-semibold tracking-tight">
-                  ${tier.priceMonthly}
+                  {formatDollars(tier.priceMonthly)}
                 </span>
                 <span className="text-sm text-stone">/ month</span>
               </div>

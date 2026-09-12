@@ -49,7 +49,7 @@ config values. Stripe is needed only for signup and billing flows.
 3. **Security rules** — `firebase deploy --only firestore:rules`. All Firestore
    access goes through server code with the Admin SDK, so the rules deny every
    client read and write.
-4. **Stripe** — create three monthly recurring prices (\$50 / \$90 / \$150) and
+4. **Stripe** — create three monthly recurring prices (\$49.99 / \$89.99 / \$149.99) and
    set `STRIPE_PRICE_ESSENTIAL`, `STRIPE_PRICE_SIGNATURE`,
    `STRIPE_PRICE_PREMIER`, plus `STRIPE_SECRET_KEY`.
 5. **Stripe webhook** — point an endpoint at `/api/stripe/webhook` for

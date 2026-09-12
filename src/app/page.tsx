@@ -2,6 +2,7 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SizeRangeNotice } from "@/components/SizeRangeNotice";
 import { BRAND, SIZE_RANGE, TIERS, STEPS } from "@/lib/config";
+import { formatDollars } from "@/lib/format";
 import { outboundShippingShortNote, shippingNoteForTier } from "@/lib/rules";
 import { getSessionUser } from "@/lib/session";
 
@@ -69,7 +70,7 @@ export default async function Home() {
                 <h3 className="text-lg font-semibold">{tier.name}</h3>
                 <div className="mt-4 flex items-baseline gap-1">
                   <span className="text-4xl font-semibold tracking-tight">
-                    ${tier.priceMonthly}
+                    {formatDollars(tier.priceMonthly)}
                   </span>
                   <span className="text-stone">/ month</span>
                 </div>
