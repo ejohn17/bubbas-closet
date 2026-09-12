@@ -85,9 +85,6 @@ env:
     availability: [RUNTIME]
   - variable: MAILCHIMP_AUDIENCE_ID
     value: "ea9d782d76"
-    availability: [RUNTIME]
-  - variable: CRON_SECRET
-    secret: CRON_SECRET
   # --- Scheduled jobs (Cloud Scheduler calls /api/cron/*) ---
   - variable: CRON_SECRET
     secret: CRON_SECRET
