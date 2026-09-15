@@ -248,15 +248,23 @@ export async function clearBox(uid: string): Promise<void> {
   }
 }
 
-/** Sweeps holds past their TTL and returns the units to the catalogue. */
+/**
+ * Sweeps holds past their TTL and returns the units to the catalogue.
+ *
+ * Also frees reserved units whose hold document is already gone. The member
+ * box hides expired holds in memory, so a console delete or TTL on `holds`
+ * would otherwise leave garments reserved forever — the cron only used to
+ * look at hold docs.
+ */
 export async function releaseExpiredHolds(at = nowMs()): Promise<number> {
   const db = requireDb();
+  let released = 0;
+
   const expired = await db
     .collection(COL.holds)
     .where("expiresAt", "<", at)
     .get();
 
-  let released = 0;
   for (const doc of expired.docs) {
     const hold = docTo<HoldDoc>(doc);
     if (!hold) continue;
@@ -264,8 +272,62 @@ export async function releaseExpiredHolds(at = nowMs()): Promise<number> {
       await removeFromBox(hold.uid, hold.id);
       released += 1;
     } catch {
-      // Skip and let the next sweep retry.
+      // Unit sweep below retries if the hold delete and unit update diverged.
     }
   }
+
+  const reserved = await db
+    .collection(COL.units)
+    .where("status", "==", "reserved")
+    .get();
+
+  for (const doc of reserved.docs) {
+    const unit = docTo<UnitDoc>(doc);
+    if (!unit) continue;
+    if (!(await shouldReleaseReservedUnit(unit, at))) continue;
+    await releaseReservedUnit(unit.id);
+    released += 1;
+  }
+
   return released;
+}
+
+async function shouldReleaseReservedUnit(
+  unit: UnitDoc,
+  at: number,
+): Promise<boolean> {
+  if (unit.holdId) {
+    const hold = docTo<HoldDoc>(
+      await requireDb().collection(COL.holds).doc(unit.holdId).get(),
+    );
+    if (hold) return !isLive(hold, at);
+  }
+  return unit.holdExpiresAt == null || unit.holdExpiresAt < at;
+}
+
+/** Returns an orphaned reserved unit to the closet. */
+async function releaseReservedUnit(unitId: string): Promise<void> {
+  const db = requireDb();
+  const unitRef = db.collection(COL.units).doc(unitId);
+
+  await db.runTransaction(async (tx) => {
+    const unitSnap = await tx.get(unitRef);
+    const unit = docTo<UnitDoc>(unitSnap);
+    if (!unit || unit.status !== "reserved") return;
+
+    tx.set(
+      unitRef,
+      {
+        status: "available",
+        holderUid: null,
+        holdId: null,
+        holdExpiresAt: null,
+        updatedAt: nowMs(),
+      },
+      { merge: true },
+    );
+    if (unit.holdId) {
+      tx.delete(db.collection(COL.holds).doc(unit.holdId));
+    }
+  });
 }

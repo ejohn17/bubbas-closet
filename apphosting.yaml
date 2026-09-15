@@ -76,7 +76,7 @@ env:
     secret: RESEND_API_KEY
     availability: [RUNTIME]
   - variable: WAITLIST_FROM_EMAIL
-    value: "Bubbas Closet <hello@bubbascloset.com>"
+    value: "Bubbas Closet <hello@mybubbascloset.ca>"
     availability: [RUNTIME]
 
   # --- Mailchimp campaigns ---

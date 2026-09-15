@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PreviewCarousel } from "@/components/PreviewCarousel";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SizeRangeNotice } from "@/components/SizeRangeNotice";
 import { BRAND, SIZE_RANGE, TIERS, STEPS } from "@/lib/config";
@@ -35,6 +36,19 @@ export default async function Home() {
               </Link>
             </>
           )}
+        </div>
+      </section>
+
+      <section className="mx-auto w-full max-w-6xl px-6 pb-16">
+        <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+          A peek at the closet
+        </h2>
+        <p className="mt-2 max-w-xl text-stone">
+          A rotating mix of everyday pieces and little statement finds, in
+          sizes {SIZE_RANGE.label}.
+        </p>
+        <div className="mt-8">
+          <PreviewCarousel />
         </div>
       </section>
 

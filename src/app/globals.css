@@ -106,3 +106,12 @@ select:disabled {
     @apply text-ink underline decoration-line underline-offset-4 transition hover:text-accent-dark;
   }
 }
+
+/* Marketing closet preview: keep swipe/scroll, hide the bar. */
+.preview-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.preview-scroll::-webkit-scrollbar {
+  display: none;
+}
