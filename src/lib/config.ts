@@ -10,7 +10,7 @@ export const BRAND = {
   description:
     "A subscription clothing rental for kids. Pick a monthly membership, choose pieces that fit, wear them, and swap for something new next month.",
   // Placeholder — swap for the real launch email once available.
-  contactEmail: "hello@bubbascloset.com",
+  contactEmail: "hello@mybubbascloset.ca",
 };
 
 /** Closet size range shown on the landing and subscribe pages. */
