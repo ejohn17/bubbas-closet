@@ -6,6 +6,7 @@ import { FavoriteButton } from "@/components/portal/FavoriteButton";
 import { AddToBoxControls } from "@/components/portal/AddToBoxControls";
 import { CatalogCarousel } from "@/components/portal/CatalogCarousel";
 import { GuestAddPrompt } from "@/components/portal/GuestAddPrompt";
+import { CollapsibleFilters } from "@/components/CollapsibleFilters";
 import { recommendTierFor } from "@/lib/config";
 import { hasTag, matchesLabel, uniqueLabels } from "@/lib/filters";
 import { formatDollars } from "@/lib/format";
@@ -144,13 +145,36 @@ export function Catalog({
           options={brands}
           onChange={setBrandFilter}
         />
-        <FilterRow
-          label="Tags"
-          allLabel="All tags"
-          value={tagFilter}
-          options={tags}
-          onChange={setTagFilter}
-        />
+        {tags.length > 0 ? (
+          <CollapsibleFilters
+            label="Tags"
+            summary={
+              tagFilter ? (
+                <FilterChip active onClick={() => setTagFilter("")}>
+                  {tagFilter}
+                </FilterChip>
+              ) : null
+            }
+          >
+            <div className="flex flex-wrap items-center gap-1.5">
+              <FilterChip
+                active={!tagFilter}
+                onClick={() => setTagFilter("")}
+              >
+                All tags
+              </FilterChip>
+              {tags.map((option) => (
+                <FilterChip
+                  key={option}
+                  active={tagFilter === option}
+                  onClick={() => setTagFilter(option)}
+                >
+                  {option}
+                </FilterChip>
+              ))}
+            </div>
+          </CollapsibleFilters>
+        ) : null}
         <FilterRow
           label="Size"
           allLabel="All sizes"

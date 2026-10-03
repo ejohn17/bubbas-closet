@@ -5,8 +5,20 @@ import { hasTag, matchesLabel, uniqueLabels } from "@/lib/filters";
 import { ProductImage } from "@/components/ProductImage";
 import { AdminSearch } from "@/components/admin/AdminSearch";
 import { FilterTabs } from "@/components/admin/FilterTabs";
+import { CollapsibleFilters } from "@/components/CollapsibleFilters";
 
 const NONE = "__none__";
+
+function productsFilterHref(
+  params: Record<string, string | undefined>,
+): string {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value) query.set(key, value);
+  }
+  const encoded = query.toString();
+  return encoded ? `/admin/products?${encoded}` : "/admin/products";
+}
 
 export default async function AdminProducts({
   searchParams,
@@ -124,8 +136,19 @@ export default async function AdminProducts({
         ) : null}
 
         {tags.length > 0 ? (
-          <div>
-            <p className="label">Tags</p>
+          <CollapsibleFilters
+            label="Tags"
+            summary={
+              tag ? (
+                <Link
+                  href={productsFilterHref({ ...extras, tag: undefined })}
+                  className="pill border border-ink bg-ink text-cream"
+                >
+                  {tag}
+                </Link>
+              ) : null
+            }
+          >
             <FilterTabs
               basePath="/admin/products"
               param="tag"
@@ -140,7 +163,7 @@ export default async function AdminProducts({
                 })),
               ]}
             />
-          </div>
+          </CollapsibleFilters>
         ) : null}
 
         <div>
