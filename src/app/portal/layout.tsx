@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BRAND } from "@/lib/config";
+import { BRAND, recommendTierFor } from "@/lib/config";
 import { requireUser } from "@/lib/session";
-import { getEntitlement } from "@/lib/db/subscriptions";
+import { getPortalAccess } from "@/lib/portal";
 import { getBox } from "@/lib/db/holds";
 import { getTier } from "@/lib/tiers";
 import { PortalNav } from "@/components/portal/PortalNav";
@@ -14,8 +14,10 @@ import { SignOutButton } from "@/components/SignOutButton";
 export const dynamic = "force-dynamic";
 
 /**
- * The gate: every /portal page requires a signed-in member on an active
- * membership. Checked server-side here so no portal page can render without it.
+ * The gate: every /portal page requires a signed-in user. Members get the full
+ * portal; signed-in visitors without a membership get the same closet in
+ * preview mode so they can build a box before choosing a plan. Only a
+ * membership with a billing problem is sent away, to /portal-paused.
  */
 export default async function PortalLayout({
   children,
@@ -23,14 +25,15 @@ export default async function PortalLayout({
   children: ReactNode;
 }) {
   const user = await requireUser("/portal");
-  const entitlement = await getEntitlement(user.uid);
+  const access = await getPortalAccess(user);
 
-  if (!entitlement.entitled) {
-    redirect(entitlement.subscription ? "/portal-paused" : "/subscribe");
-  }
+  if (access.mode === "paused") redirect("/portal-paused");
 
-  const box = await getBox(user.uid, entitlement.itemLimit);
-  const tier = getTier(entitlement.subscription?.tierId ?? "");
+  const box = await getBox(user.uid, access.itemLimit);
+  const tier = getTier(access.entitlement.subscription?.tierId ?? "");
+  const previewing = access.mode === "preview";
+  const pieces = box.holds.length === 1 ? "piece" : "pieces";
+  const recommended = previewing ? recommendTierFor(box.holds.length) : null;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -45,10 +48,22 @@ export default async function PortalLayout({
             </div>
 
             <div className="flex items-center gap-4 text-sm">
-              <span className="text-stone">
-                {tier ? `${tier.name} · ` : ""}
-                {box.holds.length} of {entitlement.itemLimit} picked
-              </span>
+              {previewing ? (
+                <>
+                  <span className="text-stone">
+                    {box.holds.length} {pieces} picked
+                    {recommended ? ` · ${recommended.name} fits` : ""}
+                  </span>
+                  <Link href="/subscribe" className="btn-primary btn-sm">
+                    Choose a plan
+                  </Link>
+                </>
+              ) : (
+                <span className="text-stone">
+                  {tier ? `${tier.name} · ` : ""}
+                  {box.holds.length} of {access.itemLimit} picked
+                </span>
+              )}
               {user.isAdmin ? (
                 <Link href="/admin" className="text-stone transition hover:text-ink">
                   Admin
@@ -59,7 +74,11 @@ export default async function PortalLayout({
           </div>
         </header>
         {box.expiresAt ? (
-          <HoldBanner expiresAt={box.expiresAt} itemCount={box.holds.length} />
+          <HoldBanner
+            expiresAt={box.expiresAt}
+            itemCount={box.holds.length}
+            mode={access.mode}
+          />
         ) : null}
       </div>
 

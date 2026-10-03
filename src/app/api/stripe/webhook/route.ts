@@ -1,11 +1,8 @@
 import type Stripe from "stripe";
 import { NextResponse } from "next/server";
-import { syncSubscription } from "@/lib/billing";
+import { completeCheckoutSession, syncSubscription } from "@/lib/billing";
 import { setPendingTier } from "@/lib/db/subscriptions";
-import { updateShippingAddress } from "@/lib/db/users";
-import { defaultShippingCountry, normalizeShippingCountry } from "@/lib/rules";
 import { requireStripe } from "@/lib/stripe";
-import type { Address } from "@/lib/types";
 
 /**
  * Stripe webhook: the only writer of subscription state in Firestore.
@@ -43,20 +40,9 @@ export async function POST(request: Request) {
   try {
     switch (event.type) {
       case "checkout.session.completed": {
-        const session = event.data.object;
-        if (session.subscription) {
-          const subId =
-            typeof session.subscription === "string"
-              ? session.subscription
-              : session.subscription.id;
-          const sub = await stripe.subscriptions.retrieve(subId);
-          await syncSubscription(sub);
-        }
-        const uid = session.metadata?.uid || session.client_reference_id;
-        const address = shippingAddressFrom(session);
-        if (uid && address) {
-          await updateShippingAddress(uid, address);
-        }
+        // The /subscribe/complete return page runs the same sync so the member
+        // isn't waiting on webhook delivery; both paths are idempotent.
+        await completeCheckoutSession(event.data.object);
         break;
       }
 
@@ -106,42 +92,4 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ received: true });
-}
-
-type ShippingDetails = {
-  name?: string | null;
-  address?: {
-    line1?: string | null;
-    line2?: string | null;
-    city?: string | null;
-    state?: string | null;
-    postal_code?: string | null;
-    country?: string | null;
-  } | null;
-};
-
-function shippingAddressFrom(
-  session: Stripe.Checkout.Session,
-): Address | null {
-  // Stripe moved shipping_details under collected_information; support both.
-  const loose = session as unknown as {
-    collected_information?: { shipping_details?: ShippingDetails | null };
-    shipping_details?: ShippingDetails | null;
-  };
-  const details =
-    loose.collected_information?.shipping_details ?? loose.shipping_details ?? null;
-  const address = details?.address;
-  if (!address?.line1 || !address.city) return null;
-
-  return {
-    name: details?.name ?? session.customer_details?.name ?? "",
-    line1: address.line1,
-    line2: address.line2 ?? undefined,
-    city: address.city,
-    region: address.state ?? "",
-    postalCode: address.postal_code ?? "",
-    country:
-      normalizeShippingCountry(address.country) ??
-      defaultShippingCountry(session.metadata?.tierId),
-  };
 }

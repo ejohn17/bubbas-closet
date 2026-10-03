@@ -5,8 +5,8 @@ import { StatusPill } from "@/components/StatusPill";
 import { ManageBillingButton } from "@/components/portal/ManageBillingButton";
 import { getEntitlement } from "@/lib/db/subscriptions";
 import { listPicks } from "@/lib/db/picks";
+import { isBillingPaused } from "@/lib/portal";
 import { requireUser } from "@/lib/session";
-import { formatDate } from "@/lib/format";
 import { BRAND } from "@/lib/config";
 
 export const metadata = { title: `Membership paused — ${BRAND.name}` };
@@ -14,24 +14,21 @@ export const metadata = { title: `Membership paused — ${BRAND.name}` };
 export const dynamic = "force-dynamic";
 
 /**
- * Lapsed members land here instead of the closet: read-only, with a route back
- * to an active membership. Lives outside /portal so the gate can redirect here
- * without looping.
+ * Members whose last payment failed land here instead of the closet: read-only,
+ * with a route back to billing. Members whose membership simply ended go back
+ * into the closet in preview mode and can rebuild a box before resubscribing.
+ * Lives outside /portal so the gate can redirect here without looping.
  */
 export default async function PortalPausedPage() {
   const user = await requireUser("/portal");
-  const { subscription, entitled } = await getEntitlement(user.uid);
+  const { subscription } = await getEntitlement(user.uid);
 
-  if (entitled) redirect("/portal");
-  if (!subscription) redirect("/subscribe");
+  if (!subscription || !isBillingPaused(subscription)) redirect("/portal");
 
   const picks = await listPicks({ uid: user.uid });
   const outstanding = picks
     .filter((p) => p.status === "shipped" || p.status === "partially_returned")
     .flatMap((p) => p.items.filter((item) => !item.returnedAt));
-
-  const isPastDue =
-    subscription.status === "past_due" || subscription.status === "unpaid";
 
   return (
     <>
@@ -45,15 +42,14 @@ export default async function PortalPausedPage() {
         </div>
 
         <p className="mt-4 text-stone">
-          {isPastDue
-            ? "We couldn't take the last payment, so the closet is locked for now. Update your card and everything comes straight back."
-            : `Your membership ended ${formatDate(subscription.currentPeriodEnd)}. Pick a plan whenever you'd like to start again.`}
+          We couldn&apos;t take the last payment, so the closet is locked for
+          now. Update your card and everything comes straight back.
         </p>
 
         <div className="mt-8 flex flex-wrap items-center gap-4">
-          {isPastDue ? <ManageBillingButton /> : null}
+          <ManageBillingButton />
           <Link href="/subscribe" className="btn-primary">
-            {isPastDue ? "Choose a different plan" : "Restart my membership"}
+            Choose a different plan
           </Link>
         </div>
 

@@ -36,10 +36,13 @@ export async function SiteHeader() {
           </>
         ) : (
           <>
+            <Link href="/closet" className="text-stone transition hover:text-ink">
+              The closet
+            </Link>
             <Link href="/login" className="text-stone transition hover:text-ink">
               Sign in
             </Link>
-            <Link href="/subscribe" className="btn-outline btn-sm">
+            <Link href="/signup?next=%2Fportal" className="btn-outline btn-sm">
               Join
             </Link>
           </>

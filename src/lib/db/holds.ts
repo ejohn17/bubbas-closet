@@ -59,6 +59,8 @@ export async function addToBox(input: {
   productId: string;
   size: string;
   itemLimit: number;
+  /** Shown when the box is full; defaults to the member's plan wording. */
+  limitMessage?: string;
 }): Promise<HoldDoc> {
   const db = requireDb();
   const product = await getProduct(input.productId);
@@ -119,6 +121,7 @@ async function reserveUnit(input: {
   uid: string;
   unitId: string;
   itemLimit: number;
+  limitMessage?: string;
   product: { id: string; title: string; images: string[] };
 }): Promise<HoldDoc> {
   const db = requireDb();
@@ -148,7 +151,8 @@ async function reserveUnit(input: {
     if (liveHolds.length >= input.itemLimit) {
       throw new DomainError(
         "limit_reached",
-        `Your plan covers ${input.itemLimit} items per month. Remove something to add this.`,
+        input.limitMessage ??
+          `Your plan covers ${input.itemLimit} items per month. Remove something to add this.`,
         409,
       );
     }
@@ -235,6 +239,37 @@ export async function removeFromBox(
         { merge: true },
       );
     }
+  });
+}
+
+/**
+ * Restarts the hold window for every live piece in the box, the same way
+ * adding a piece does. Used around Stripe Checkout so a box built before
+ * subscribing isn't released while the member is paying for it.
+ * Returns the new expiry, or null if the box is empty.
+ */
+export async function refreshHolds(uid: string): Promise<number | null> {
+  const db = requireDb();
+  const holdsQuery = db.collection(COL.holds).where("uid", "==", uid);
+
+  return db.runTransaction(async (tx) => {
+    const holdsSnap = await tx.get(holdsQuery);
+    const at = nowMs();
+    const liveHolds = docsTo<HoldDoc>(holdsSnap.docs).filter((h) =>
+      isLive(h, at),
+    );
+    if (!liveHolds.length) return null;
+
+    const expiresAt = at + RULES.holdTtlMinutes * 60_000;
+    for (const hold of liveHolds) {
+      tx.update(db.collection(COL.holds).doc(hold.id), { expiresAt });
+      tx.set(
+        db.collection(COL.units).doc(hold.unitId),
+        { holdExpiresAt: expiresAt, updatedAt: at },
+        { merge: true },
+      );
+    }
+    return expiresAt;
   });
 }
 

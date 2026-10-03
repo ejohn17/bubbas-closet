@@ -4,10 +4,12 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SizeRangeNotice } from "@/components/SizeRangeNotice";
 import { TierPicker, type TierOption } from "@/components/TierPicker";
-import { BRAND, STEPS, TIERS } from "@/lib/config";
+import { BRAND, recommendTierFor, STEPS, TIERS } from "@/lib/config";
+import { formatDollars } from "@/lib/format";
 import { getSessionUser } from "@/lib/session";
 import { getEntitlement } from "@/lib/db/subscriptions";
 import { isFirebaseConfigured } from "@/lib/firebase-admin";
+import { listHolds, refreshHolds } from "@/lib/db/holds";
 import { priceIdForTier } from "@/lib/tiers";
 
 export const metadata: Metadata = {
@@ -22,11 +24,15 @@ export default async function SubscribePage({
   const { cancelled } = await searchParams;
   const user = await getSessionUser();
 
+  let boxCount = 0;
   if (user && isFirebaseConfigured()) {
     const { entitled } = await getEntitlement(user.uid);
     if (entitled) redirect("/portal");
+    await refreshHolds(user.uid);
+    boxCount = (await listHolds(user.uid)).length;
   }
 
+  const recommended = recommendTierFor(boxCount);
   const tiers: TierOption[] = TIERS.map((tier) => ({
     ...tier,
     available: Boolean(priceIdForTier(tier.id)),
@@ -40,8 +46,11 @@ export default async function SubscribePage({
           Choose your membership
         </h1>
         <p className="mt-3 max-w-xl text-stone">
-          Pick the plan that matches how often you like to switch up their
-          clothes. You can change plans later from your account.
+          {boxCount > 0
+            ? recommended
+              ? `Your box has ${boxCount} ${boxCount === 1 ? "piece" : "pieces"}. ${recommended.name} (${formatDollars(recommended.priceMonthly)}/mo, up to ${recommended.items}) covers it — you can pick a larger plan if you want more room next month.`
+              : `Your box has ${boxCount} pieces, which is as many as our biggest plan covers.`
+            : "Browse the closet and build a box first if you like — or pick a plan now and choose pieces after you subscribe. You can change plans later from your account."}
         </p>
         <SizeRangeNotice className="mt-6 max-w-xl" />
 
@@ -52,8 +61,23 @@ export default async function SubscribePage({
           </p>
         ) : null}
 
+        {boxCount === 0 ? (
+          <p className="mt-6 text-sm text-stone">
+            Want to see what&apos;s on the shelf first?{" "}
+            <Link href={user ? "/portal" : "/closet"} className="link text-ink">
+              Browse the closet
+            </Link>{" "}
+            and come back when your box is ready.
+          </p>
+        ) : null}
+
         <div className="mt-10">
-          <TierPicker tiers={tiers} signedIn={Boolean(user)} />
+          <TierPicker
+            tiers={tiers}
+            signedIn={Boolean(user)}
+            boxCount={boxCount}
+            recommendedTierId={recommended?.id ?? null}
+          />
         </div>
 
         <p className="mt-8 text-sm text-stone">

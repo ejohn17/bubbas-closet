@@ -1,23 +1,27 @@
 import { ok, readJson, toErrorResponse } from "@/lib/api";
 import { DomainError } from "@/lib/db/base";
 import { addToBox, getBox, removeFromBox } from "@/lib/db/holds";
-import { requireEntitledUser } from "@/lib/portal";
+import { requirePortalUser } from "@/lib/portal";
 
 /** The member's current box (live holds). */
 export async function GET() {
   try {
-    const { user, entitlement } = await requireEntitledUser();
-    const box = await getBox(user.uid, entitlement.itemLimit);
+    const { user, itemLimit } = await requirePortalUser();
+    const box = await getBox(user.uid, itemLimit);
     return ok({ box });
   } catch (err) {
     return toErrorResponse(err);
   }
 }
 
-/** Add a piece — reserves a specific unit for RULES.holdTtlMinutes. */
+/**
+ * Add a piece — reserves a specific unit for RULES.holdTtlMinutes.
+ * Open to members and to signed-in visitors building a box before they
+ * subscribe; the latter are capped at our largest plan.
+ */
 export async function POST(request: Request) {
   try {
-    const { user, entitlement } = await requireEntitledUser();
+    const { user, itemLimit, mode } = await requirePortalUser();
     const { productId, size } = await readJson<{
       productId: string;
       size: string;
@@ -31,9 +35,13 @@ export async function POST(request: Request) {
       uid: user.uid,
       productId,
       size,
-      itemLimit: entitlement.itemLimit,
+      itemLimit,
+      limitMessage:
+        mode === "preview"
+          ? `That's as many pieces as our biggest plan covers (${itemLimit}). Remove something to add this.`
+          : undefined,
     });
-    const box = await getBox(user.uid, entitlement.itemLimit);
+    const box = await getBox(user.uid, itemLimit);
 
     return ok({ hold, box });
   } catch (err) {
@@ -44,7 +52,7 @@ export async function POST(request: Request) {
 /** Remove a piece and release the unit back to the catalogue. */
 export async function DELETE(request: Request) {
   try {
-    const { user, entitlement } = await requireEntitledUser();
+    const { user, itemLimit } = await requirePortalUser();
     const holdId =
       new URL(request.url).searchParams.get("holdId") ??
       (await readJson<{ holdId: string }>(request)).holdId;
@@ -52,7 +60,7 @@ export async function DELETE(request: Request) {
     if (!holdId) throw new DomainError("missing_hold", "Nothing to remove.");
 
     await removeFromBox(user.uid, holdId);
-    const box = await getBox(user.uid, entitlement.itemLimit);
+    const box = await getBox(user.uid, itemLimit);
 
     return ok({ box });
   } catch (err) {

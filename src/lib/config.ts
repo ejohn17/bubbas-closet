@@ -8,7 +8,7 @@ export const BRAND = {
   name: "Bubbas Closet",
   tagline: "Rent a rotating children's wardrobe, monthly",
   description:
-    "A subscription clothing rental for kids. Pick a monthly membership, choose pieces that fit, wear them, and swap for something new next month.",
+    "A subscription clothing rental for kids. Browse the closet, build a box of pieces that fit, then choose a monthly membership that covers what you picked.",
   // Placeholder — swap for the real launch email once available.
   contactEmail: "hello@mybubbascloset.ca",
 };
@@ -54,6 +54,30 @@ export const TIERS: Tier[] = [
   },
 ];
 
+/**
+ * How many pieces a visitor can hold before choosing a plan: as many as our
+ * largest plan covers, so the box they build always maps onto a membership.
+ */
+export const PREVIEW_ITEM_LIMIT = Math.max(...TIERS.map((t) => t.items));
+
+/**
+ * The cheapest tier whose monthly allotment fits a box of `itemCount` pieces.
+ * Null for an empty box (nothing to size against) or a box larger than any plan.
+ */
+export function recommendTierFor(itemCount: number): Tier | null {
+  if (itemCount <= 0) return null;
+  return (
+    [...TIERS]
+      .sort((a, b) => a.items - b.items)
+      .find((tier) => tier.items >= itemCount) ?? null
+  );
+}
+
+/** Whether a plan's monthly allotment can cover a box of this size. */
+export function tierFitsBox(tier: Tier, itemCount: number): boolean {
+  return itemCount <= 0 || tier.items >= itemCount;
+}
+
 export type Step = {
   title: string;
   body: string;
@@ -61,12 +85,12 @@ export type Step = {
 
 export const STEPS: Step[] = [
   {
-    title: "Choose your tier",
-    body: "Pick the monthly membership that fits your budget and how much you like to switch things up.",
+    title: "Build your box",
+    body: "Browse the whole closet before you pay. Create a free account and add the children's pieces you love — each one is held for you while you decide.",
   },
   {
-    title: "Build your box",
-    body: "Browse the members-only closet and add children's pieces to your box, up to your tier's monthly item count.",
+    title: "Pick the plan that fits",
+    body: "We suggest the membership that covers everything in your box. Subscribe and your box is ready to confirm.",
   },
   {
     title: "Wear it all month",

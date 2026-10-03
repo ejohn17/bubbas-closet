@@ -27,7 +27,7 @@ export default async function LoginPage({
       <main className="mx-auto w-full max-w-md flex-1 px-6 pb-24 pt-8">
         <h1 className="text-3xl font-semibold tracking-tight">Welcome back</h1>
         <p className="mt-2 mb-8 text-stone">
-          Sign in to build next month&apos;s box.
+          Sign in to keep shopping, or manage your membership.
         </p>
         <AuthForm mode="login" next={destination} />
       </main>

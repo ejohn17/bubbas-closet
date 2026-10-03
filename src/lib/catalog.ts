@@ -32,3 +32,28 @@ export function catalogSizes(availability?: {
     .sort((a, b) => compareSizes(a.size, b.size));
 }
 
+export function toCatalogItem(
+  product: {
+    id: string;
+    title: string;
+    brand?: string;
+    category?: string;
+    description: string;
+    images: string[];
+  },
+  availability?: Parameters<typeof catalogSizes>[0],
+  flags?: { favorited?: boolean; inBox?: boolean },
+): CatalogItem {
+  return {
+    id: product.id,
+    title: product.title,
+    brand: product.brand,
+    category: product.category,
+    description: product.description,
+    images: product.images,
+    sizes: catalogSizes(availability),
+    favorited: flags?.favorited ?? false,
+    inBox: flags?.inBox ?? false,
+  };
+}
+

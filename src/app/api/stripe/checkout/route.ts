@@ -1,10 +1,11 @@
 import { ok, readJson, requireApiUser, toErrorResponse } from "@/lib/api";
 import { DomainError } from "@/lib/db/base";
 import { getEntitlement } from "@/lib/db/subscriptions";
+import { listHolds, refreshHolds } from "@/lib/db/holds";
 import { ensureStripeCustomer } from "@/lib/billing";
+import { getTier, priceIdForTier } from "@/lib/tiers";
 import { shippingCountriesForTier } from "@/lib/rules";
 import { requireStripe, siteUrl } from "@/lib/stripe";
-import { priceIdForTier } from "@/lib/tiers";
 
 /** Starts a Stripe Checkout session for a membership tier. */
 export async function POST(request: Request) {
@@ -28,6 +29,16 @@ export async function POST(request: Request) {
       throw new DomainError(
         "already_subscribed",
         "You already have an active membership. Change your plan from your account instead.",
+      );
+    }
+
+    const tier = getTier(tierId);
+    await refreshHolds(user.uid);
+    const holds = await listHolds(user.uid);
+    if (tier && holds.length > tier.items) {
+      throw new DomainError(
+        "box_too_large",
+        `Your box has ${holds.length} pieces. ${tier.name} covers ${tier.items}. Remove some pieces or pick a larger plan.`,
       );
     }
 

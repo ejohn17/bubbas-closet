@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/session";
-import { getEntitlement } from "@/lib/db/subscriptions";
+import { getPortalAccess } from "@/lib/portal";
 import { getProducts } from "@/lib/db/products";
 import { availabilityByProduct } from "@/lib/db/units";
 import { listFavoriteProductIds } from "@/lib/db/favorites";
@@ -12,7 +12,7 @@ export const metadata = { title: "Favorites" };
 
 export default async function FavoritesPage() {
   const user = await requireUser("/portal/favorites");
-  const entitlement = await getEntitlement(user.uid);
+  const access = await getPortalAccess(user);
 
   const favoriteIds = await listFavoriteProductIds(user.uid);
   const [products, availability, holds] = await Promise.all([
@@ -56,8 +56,9 @@ export default async function FavoritesPage() {
         <div className="mt-8">
           <Catalog
             items={items}
-            itemLimit={entitlement.itemLimit}
+            itemLimit={access.itemLimit}
             boxCount={holds.length}
+            mode={access.mode === "member" ? "member" : "preview"}
           />
         </div>
       )}

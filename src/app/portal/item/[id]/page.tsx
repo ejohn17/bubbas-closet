@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/session";
-import { getEntitlement } from "@/lib/db/subscriptions";
+import { getPortalAccess } from "@/lib/portal";
 import { getProduct } from "@/lib/db/products";
 import { availabilityByProduct } from "@/lib/db/units";
 import { listFavoriteProductIds } from "@/lib/db/favorites";
@@ -24,8 +24,8 @@ export default async function PortalItemPage({
   const product = await getProduct(id);
   if (!product || !product.active) notFound();
 
-  const [entitlement, availability, favoriteIds, holds] = await Promise.all([
-    getEntitlement(user.uid),
+  const [access, availability, favoriteIds, holds] = await Promise.all([
+    getPortalAccess(user),
     availabilityByProduct(),
     listFavoriteProductIds(user.uid),
     listHolds(user.uid),
@@ -33,7 +33,7 @@ export default async function PortalItemPage({
 
   const sizes = catalogSizes(availability[product.id]);
   const inBox = holds.some((h) => h.productId === product.id);
-  const full = holds.length >= entitlement.itemLimit;
+  const full = holds.length >= access.itemLimit;
   const preferredSize =
     user.profile?.sizeProfile?.dresses ||
     user.profile?.sizeProfile?.tops ||

@@ -9,6 +9,7 @@ import {
   findUserByStripeCustomerId,
   getUser,
   setStripeCustomerId,
+  updateShippingAddress,
 } from "@/lib/db/users";
 import {
   getTier,
@@ -17,11 +18,13 @@ import {
   priceIdForTier,
   tierForPriceId,
 } from "@/lib/tiers";
-import type { SubscriptionStatus } from "@/lib/types";
+import type { Address, SubscriptionStatus } from "@/lib/types";
 import {
   RULES,
+  defaultShippingCountry,
   formatShippingCountries,
   isCountryAllowedForTier,
+  normalizeShippingCountry,
   shippingCountriesForTier,
 } from "@/lib/rules";
 import {
@@ -109,6 +112,69 @@ export async function syncSubscription(
       console.warn("[billing] could not set default invoice payment method", err);
     }
   }
+}
+
+/**
+ * Records the outcome of a completed Checkout session: mirrors the new
+ * subscription into Firestore and copies the collected shipping address onto
+ * the member. Idempotent, so the webhook and the post-checkout return page can
+ * both call it — whichever runs first wins and the other is a no-op.
+ */
+export async function completeCheckoutSession(
+  session: Stripe.Checkout.Session,
+): Promise<void> {
+  const stripe = requireStripe();
+
+  if (session.subscription) {
+    const subId =
+      typeof session.subscription === "string"
+        ? session.subscription
+        : session.subscription.id;
+    const sub = await stripe.subscriptions.retrieve(subId);
+    await syncSubscription(sub);
+  }
+
+  const uid = session.metadata?.uid || session.client_reference_id;
+  const address = shippingAddressFrom(session);
+  if (uid && address) {
+    await updateShippingAddress(uid, address);
+  }
+}
+
+type ShippingDetails = {
+  name?: string | null;
+  address?: {
+    line1?: string | null;
+    line2?: string | null;
+    city?: string | null;
+    state?: string | null;
+    postal_code?: string | null;
+    country?: string | null;
+  } | null;
+};
+
+function shippingAddressFrom(session: Stripe.Checkout.Session): Address | null {
+  // Stripe moved shipping_details under collected_information; support both.
+  const loose = session as unknown as {
+    collected_information?: { shipping_details?: ShippingDetails | null };
+    shipping_details?: ShippingDetails | null;
+  };
+  const details =
+    loose.collected_information?.shipping_details ?? loose.shipping_details ?? null;
+  const address = details?.address;
+  if (!address?.line1 || !address.city) return null;
+
+  return {
+    name: details?.name ?? session.customer_details?.name ?? "",
+    line1: address.line1,
+    line2: address.line2 ?? undefined,
+    city: address.city,
+    region: address.state ?? "",
+    postalCode: address.postal_code ?? "",
+    country:
+      normalizeShippingCountry(address.country) ??
+      defaultShippingCountry(session.metadata?.tierId),
+  };
 }
 
 /** Price id is authoritative; checkout metadata is the fallback. */

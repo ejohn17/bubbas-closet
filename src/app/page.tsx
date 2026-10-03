@@ -28,10 +28,13 @@ export default async function Home() {
             </Link>
           ) : (
             <>
-              <Link href="/subscribe" className="btn-primary">
-                Become a member
+              <Link href="/closet" className="btn-primary">
+                Browse the closet
               </Link>
-              <Link href="/login" className="btn-outline">
+              <Link href="/subscribe" className="btn-outline">
+                See the plans
+              </Link>
+              <Link href="/login" className="text-sm text-stone transition hover:text-ink">
                 Sign in
               </Link>
             </>
@@ -45,11 +48,15 @@ export default async function Home() {
         </h2>
         <p className="mt-2 max-w-xl text-stone">
           A rotating mix of everyday pieces and little statement finds, in
-          sizes {SIZE_RANGE.label}.
+          sizes {SIZE_RANGE.label}. Browse every piece that is available
+          right now — no membership required to look.
         </p>
         <div className="mt-8">
           <PreviewCarousel />
         </div>
+        <Link href="/closet" className="link mt-6 inline-block text-sm">
+          See everything in the closet
+        </Link>
       </section>
 
       <section className="border-y border-line bg-card/60">
@@ -58,8 +65,8 @@ export default async function Home() {
             Memberships
           </h2>
           <p className="mt-2 max-w-xl text-stone">
-            Choose the monthly plan that matches how much you like to switch
-            up their clothes. More items, more variety — in sizes{" "}
+            Build a box first, then pick the monthly plan that covers how
+            many pieces you chose. More items, more variety — in sizes{" "}
             {SIZE_RANGE.label}.
           </p>
           <Link href="/subscribe" className="link mt-4 inline-block text-sm">
@@ -141,12 +148,12 @@ export default async function Home() {
                 Ready for a rotating kids&apos; closet?
               </h2>
               <p className="mx-auto mt-2 max-w-md text-stone">
-                Pick a plan, build their first box of kids&apos; clothes, and
-                swap for something new next month.
+                Browse the closet, hold the pieces you love, and subscribe
+                only when the box looks right.
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-                <Link href="/subscribe" className="btn-primary">
-                  Become a member
+                <Link href="/closet" className="btn-primary">
+                  Browse the closet
                 </Link>
                 <Link href="/login" className="btn-outline">
                   Sign in

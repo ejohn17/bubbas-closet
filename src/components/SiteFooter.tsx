@@ -11,6 +11,9 @@ export function SiteFooter() {
         </span>
 
         <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+          <Link href="/closet" className="transition hover:text-ink">
+            The closet
+          </Link>
           <Link href="/terms" className="transition hover:text-ink">
             Rental terms
           </Link>

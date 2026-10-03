@@ -32,9 +32,12 @@ export function useHoldClock(expiresAt: number | null) {
 export function HoldBanner({
   expiresAt,
   itemCount,
+  mode = "member",
 }: {
   expiresAt: number;
   itemCount: number;
+  /** Previewing visitors are nudged to a plan rather than to confirm. */
+  mode?: "member" | "preview";
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -42,6 +45,7 @@ export function HoldBanner({
   const refreshed = useRef(false);
   const onBox = pathname.startsWith("/portal/box");
   const pieces = itemCount === 1 ? "piece is" : "pieces are";
+  const previewing = mode === "preview";
 
   useEffect(() => {
     if (!expired || refreshed.current) return;
@@ -72,8 +76,10 @@ export function HoldBanner({
           <p>
             {urgent ? "Hurry — " : ""}
             {itemCount} {pieces} reserved for{" "}
-            <span className="tabular-nums font-semibold">{label}</span>. Confirm
-            your box before they go back to the closet.
+            <span className="tabular-nums font-semibold">{label}</span>.{" "}
+            {previewing
+              ? "Choose a plan to keep them before they go back to the closet."
+              : "Confirm your box before they go back to the closet."}
           </p>
         )}
 
@@ -86,6 +92,15 @@ export function HoldBanner({
             >
               Refresh
             </button>
+          ) : previewing ? (
+            <>
+              <Link href="/portal/box" className="btn-outline btn-sm">
+                Review box
+              </Link>
+              <Link href="/subscribe" className="btn-primary btn-sm">
+                Choose a plan
+              </Link>
+            </>
           ) : (
             <Link href="/portal/box" className="btn-primary btn-sm">
               Review box

@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ProductImage } from "@/components/ProductImage";
 import { useHoldClock } from "@/components/portal/HoldBanner";
+import { recommendTierFor } from "@/lib/config";
 import { conditionLabel, estimateOutboundShippingCents, RULES } from "@/lib/rules";
-import { formatMoney } from "@/lib/format";
+import { formatDollars, formatMoney } from "@/lib/format";
 import type { UnitCondition } from "@/lib/types";
 
 export type BoxHold = {
@@ -19,8 +20,10 @@ export type BoxHold = {
 };
 
 /**
- * The box: a list of held units with a shared countdown. Confirming turns the
- * holds into this cycle's rental order.
+ * The box: a list of held units with a shared countdown. For members,
+ * confirming turns the holds into this cycle's rental order. For visitors
+ * previewing before they subscribe, the same list leads to plan selection —
+ * the plan is sized to what's in the box.
  */
 export function BoxSummary({
   holds,
@@ -29,6 +32,7 @@ export function BoxSummary({
   addressHint,
   tierId,
   country,
+  mode = "member",
 }: {
   holds: BoxHold[];
   itemLimit: number;
@@ -36,13 +40,16 @@ export function BoxSummary({
   addressHint?: string | null;
   tierId?: string | null;
   country?: string | null;
+  mode?: "member" | "preview";
 }) {
   const router = useRouter();
   const [removedIds, setRemovedIds] = useState<Set<string>>(() => new Set());
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
 
+  const previewing = mode === "preview";
   const items = holds.filter((item) => !removedIds.has(item.id));
+  const recommended = previewing ? recommendTierFor(items.length) : null;
   const shipping = estimateOutboundShippingCents({
     tierId,
     country,
@@ -141,7 +148,10 @@ export function BoxSummary({
             </p>
             <p className="mt-1 text-sm opacity-80">
               Adding another piece restarts the {RULES.holdTtlMinutes}-minute
-              timer. Confirm before these garments go back to the closet.
+              timer.{" "}
+              {previewing
+                ? "Choose a plan before these garments go back to the closet — the timer restarts when you head to checkout."
+                : "Confirm before these garments go back to the closet."}
             </p>
           </>
         )}
@@ -174,36 +184,72 @@ export function BoxSummary({
         ))}
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="text-sm text-stone">
-            {items.length} of {itemLimit} items
-          </p>
-          {hasAddress ? (
-            shipping === 0 ? (
-              <p className="mt-1 text-sm text-stone">
-                Outbound shipping included
+      {previewing ? (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-sm text-stone">
+              {items.length} {items.length === 1 ? "piece" : "pieces"} picked
+            </p>
+            {recommended ? (
+              <p className="mt-1 max-w-sm text-sm text-stone">
+                Fits our{" "}
+                <span className="font-medium text-ink">{recommended.name}</span>{" "}
+                plan — {formatDollars(recommended.priceMonthly)}/month for up to{" "}
+                {recommended.items} pieces. You can pick a bigger plan at
+                checkout.
               </p>
             ) : (
               <p className="mt-1 max-w-sm text-sm text-stone">
-                Estimated shipping {formatMoney(shipping)} — not the actual
-                cost. Real postage is calculated when your box ships.
+                That&apos;s as many pieces as our biggest plan covers.
               </p>
-            )
-          ) : null}
+            )}
+          </div>
+
+          {expired ? null : (
+            <Link href="/subscribe" className="btn-primary">
+              Choose a plan
+            </Link>
+          )}
         </div>
+      ) : (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-sm text-stone">
+              {items.length} of {itemLimit} items
+            </p>
+            {hasAddress ? (
+              shipping === 0 ? (
+                <p className="mt-1 text-sm text-stone">
+                  Outbound shipping included
+                </p>
+              ) : (
+                <p className="mt-1 max-w-sm text-sm text-stone">
+                  Estimated shipping {formatMoney(shipping)} — not the actual
+                  cost. Real postage is calculated when your box ships.
+                </p>
+              )
+            ) : null}
+          </div>
 
-        <button
-          type="button"
-          className="btn-primary"
-          onClick={confirm}
-          disabled={pending !== null || !hasAddress || expired}
-        >
-          {pending === "confirm" ? "Confirming…" : "Confirm my box"}
-        </button>
-      </div>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={confirm}
+            disabled={pending !== null || !hasAddress || expired}
+          >
+            {pending === "confirm" ? "Confirming…" : "Confirm my box"}
+          </button>
+        </div>
+      )}
 
-      {!hasAddress ? (
+      {previewing ? (
+        <p className="mt-4 text-sm text-stone">
+          Nothing is charged until you choose a plan. Once you&apos;re a member,
+          this box is ready to confirm.
+        </p>
+      ) : null}
+
+      {!previewing && !hasAddress ? (
         <p className="mt-4 text-sm text-stone">
           {addressHint ?? "Add a shipping address"} in{" "}
           <Link href="/portal/account" className="link text-ink">

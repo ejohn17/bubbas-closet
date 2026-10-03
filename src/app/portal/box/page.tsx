@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/session";
-import { getEntitlement } from "@/lib/db/subscriptions";
+import { getPortalAccess } from "@/lib/portal";
 import { listHolds } from "@/lib/db/holds";
 import { findPickForCycle } from "@/lib/db/picks";
 import { BoxSummary } from "@/components/portal/BoxSummary";
@@ -10,12 +10,15 @@ export const metadata = { title: "My box" };
 
 export default async function BoxPage() {
   const user = await requireUser("/portal/box");
-  const entitlement = await getEntitlement(user.uid);
+  const access = await getPortalAccess(user);
+  const { entitlement, mode, itemLimit } = access;
   const holds = await listHolds(user.uid);
+  const previewing = mode === "preview";
 
-  const cyclePick = entitlement.cycleKey
-    ? await findPickForCycle(user.uid, entitlement.cycleKey)
-    : null;
+  const cyclePick =
+    mode === "member" && entitlement.cycleKey
+      ? await findPickForCycle(user.uid, entitlement.cycleKey)
+      : null;
 
   const address = user.profile?.shippingAddress;
   const canShip = Boolean(
@@ -32,8 +35,9 @@ export default async function BoxPage() {
     <div className="mx-auto max-w-2xl">
       <h1 className="text-3xl font-semibold tracking-tight">My box</h1>
       <p className="mt-2 mb-8 text-stone">
-        Everything here is reserved for {RULES.holdTtlMinutes} minutes. Confirm
-        when you&apos;re happy with your picks and we&apos;ll get it shipped.
+        {previewing
+          ? `Everything here is reserved for ${RULES.holdTtlMinutes} minutes. Choose a plan that covers these pieces — nothing is charged until you subscribe.`
+          : `Everything here is reserved for ${RULES.holdTtlMinutes} minutes. Confirm when you're happy with your picks and we'll get it shipped.`}
       </p>
 
       {cyclePick ? (
@@ -58,11 +62,12 @@ export default async function BoxPage() {
             image: h.image,
             expiresAt: h.expiresAt,
           }))}
-          itemLimit={entitlement.itemLimit}
+          itemLimit={itemLimit}
           hasAddress={canShip}
           addressHint={addressHint}
           tierId={entitlement.subscription?.tierId}
           country={address?.country}
+          mode={previewing ? "preview" : "member"}
         />
       )}
     </div>

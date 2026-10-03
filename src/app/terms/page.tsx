@@ -44,10 +44,12 @@ export default function TermsPage() {
 
           <h2>1. Your membership</h2>
           <p>
-            Memberships are monthly and renew automatically until you cancel.
-            Each tier includes a set number of garments per billing cycle:{" "}
-            {limits}. Prices are shown at signup and exclude any sales tax,
-            which is calculated at checkout.
+            You can browse the closet and hold pieces in a box before you
+            subscribe. Memberships are monthly and renew automatically until
+            you cancel. Each tier includes a set number of garments per
+            billing cycle: {limits}. The plan you pick must cover the pieces
+            already in your box. Prices are shown at signup and exclude any
+            sales tax, which is calculated at checkout.
           </p>
           <p>
             Billing is handled by Stripe. Your card is charged on the day you

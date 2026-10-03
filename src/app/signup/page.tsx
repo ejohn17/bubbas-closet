@@ -17,7 +17,7 @@ export default async function SignupPage({
   searchParams: Promise<{ next?: string }>;
 }) {
   const { next } = await searchParams;
-  const destination = safeNext(next, "/subscribe");
+  const destination = safeNext(next, "/portal");
 
   const user = await getSessionUser();
   if (user) redirect(destination);
@@ -32,7 +32,8 @@ export default async function SignupPage({
               Create your account
             </h1>
             <p className="mt-2 mb-8 text-stone">
-              One account for your membership, your box, and your returns.
+              Create a free account to start a box. You only pay when you
+              choose a plan that covers the pieces you picked.
             </p>
             <AuthForm mode="signup" next={destination} />
           </div>

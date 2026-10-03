@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { formatDollars } from "@/lib/format";
 import { outboundShippingShortNote, shippingNoteForTier } from "@/lib/rules";
+import { tierFitsBox } from "@/lib/config";
 
 export type TierOption = {
   id: string;
@@ -25,19 +26,32 @@ export function TierPicker({
   signedIn,
   mode = "signup",
   currentTierId,
+  boxCount = 0,
+  recommendedTierId,
 }: {
   tiers: TierOption[];
   signedIn: boolean;
   /** "signup" starts Checkout; "change" switches an existing membership. */
   mode?: "signup" | "change";
   currentTierId?: string | null;
+  /** Pieces already in the box — plans that can't cover them are disabled. */
+  boxCount?: number;
+  recommendedTierId?: string | null;
 }) {
-  const [selected, setSelected] = useState<string>(
-    tiers.find((t) => t.featured && t.available)?.id ??
+  const [selected, setSelected] = useState<string>(() => {
+    const recommended = tiers.find(
+      (t) => t.id === recommendedTierId && t.available && tierFitsBox(t, boxCount),
+    );
+    if (recommended) return recommended.id;
+    return (
+      tiers.find((t) => t.featured && t.available && tierFitsBox(t, boxCount))
+        ?.id ??
+      tiers.find((t) => t.available && tierFitsBox(t, boxCount))?.id ??
       tiers.find((t) => t.available)?.id ??
       tiers[0]?.id ??
-      "",
-  );
+      ""
+    );
+  });
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -77,9 +91,13 @@ export function TierPicker({
   }
 
   const selectedTier = tiers.find((t) => t.id === selected);
+  const selectedFits = selectedTier
+    ? tierFitsBox(selectedTier, boxCount)
+    : false;
   const disabled =
     pending ||
     !selectedTier?.available ||
+    !selectedFits ||
     (mode === "change" && selected === currentTierId);
 
   return (
@@ -88,6 +106,8 @@ export function TierPicker({
         {tiers.map((tier) => {
           const isSelected = tier.id === selected;
           const isCurrent = mode === "change" && tier.id === currentTierId;
+          const fits = tierFitsBox(tier, boxCount);
+          const isRecommended = tier.id === recommendedTierId;
 
           return (
             <button
@@ -95,17 +115,24 @@ export function TierPicker({
               type="button"
               onClick={() => setSelected(tier.id)}
               aria-pressed={isSelected}
+              disabled={!fits || !tier.available}
               className={`relative flex flex-col rounded-3xl border p-7 text-left transition ${
-                isSelected
-                  ? "border-accent bg-card shadow-sm"
-                  : "border-line bg-card/70 hover:border-accent/60"
+                !fits || !tier.available
+                  ? "cursor-not-allowed border-line bg-card/50 opacity-60"
+                  : isSelected
+                    ? "border-accent bg-card shadow-sm"
+                    : "border-line bg-card/70 hover:border-accent/60"
               }`}
             >
               {isCurrent ? (
                 <span className="pill absolute right-5 top-5 bg-line text-stone">
                   Current plan
                 </span>
-              ) : tier.featured ? (
+              ) : isRecommended ? (
+                <span className="pill absolute right-5 top-5 bg-accent text-cream">
+                  Fits your box
+                </span>
+              ) : tier.featured && !recommendedTierId ? (
                 <span className="pill absolute right-5 top-5 bg-accent text-cream">
                   Most popular
                 </span>
@@ -131,6 +158,10 @@ export function TierPicker({
               {!tier.available ? (
                 <p className="mt-4 text-xs text-stone">
                   Not yet available for signup.
+                </p>
+              ) : !fits ? (
+                <p className="mt-4 text-xs text-stone">
+                  Your box has {boxCount} pieces — this plan covers {tier.items}.
                 </p>
               ) : null}
             </button>
