@@ -7,6 +7,7 @@ import { compareSizes } from "@/lib/sizes";
 import { StatusPill } from "@/components/StatusPill";
 import { UnitActions } from "@/components/admin/UnitActions";
 import { FilterTabs } from "@/components/admin/FilterTabs";
+import { FilterSelectNav, FiltersMenu } from "@/components/FilterSelect";
 import { AdminSearch } from "@/components/admin/AdminSearch";
 import { formatDate } from "@/lib/format";
 import type { UnitCondition, UnitStatus } from "@/lib/types";
@@ -114,76 +115,75 @@ export default async function AdminUnits({
           </div>
         </div>
 
-        {categories.length > 0 || uncategorized > 0 ? (
-          <div>
-            <p className="label">Category</p>
-            <FilterTabs
-              basePath="/admin/units"
-              param="category"
-              current={category}
-              extraParams={{ ...extras, category: undefined }}
-              options={[
-                { value: "", label: "All categories", count: loaded.length },
-                ...categories.map((label) => ({
-                  value: label,
-                  label,
-                  count: loaded.filter((unit) =>
-                    matchesLabel(categoryOf(unit.productId), label),
-                  ).length,
-                })),
-                ...(uncategorized
-                  ? [
-                      {
-                        value: NONE,
-                        label: "Uncategorized",
-                        count: uncategorized,
-                      },
-                    ]
-                  : []),
-              ]}
-            />
-          </div>
-        ) : null}
-
-        {sizes.length > 0 ? (
-          <div>
-            <p className="label">Size</p>
-            <FilterTabs
-              basePath="/admin/units"
-              param="size"
-              current={size}
-              extraParams={{ ...extras, size: undefined }}
-              options={[
-                { value: "", label: "All sizes", count: loaded.length },
-                ...sizes.map((label) => ({
-                  value: label,
-                  label,
-                  count: loaded.filter((unit) => unit.size === label).length,
-                })),
-              ]}
-            />
-          </div>
-        ) : null}
-
-        {conditions.length > 0 ? (
-          <div>
-            <p className="label">Condition</p>
-            <FilterTabs
-              basePath="/admin/units"
-              param="condition"
-              current={condition}
-              extraParams={{ ...extras, condition: undefined }}
-              options={[
-                { value: "", label: "All conditions", count: loaded.length },
-                ...conditions.map((value) => ({
-                  value,
-                  label: conditionAdminLabel(value as UnitCondition),
-                  count: loaded.filter((unit) => unit.condition === value)
-                    .length,
-                })),
-              ]}
-            />
-          </div>
+        {categories.length > 0 ||
+        uncategorized > 0 ||
+        sizes.length > 0 ||
+        conditions.length > 0 ? (
+          <FiltersMenu
+            activeCount={[category, size, condition].filter(Boolean).length}
+          >
+            <div className="flex flex-wrap gap-3">
+              {categories.length > 0 || uncategorized > 0 ? (
+                <FilterSelectNav
+                  label="Category"
+                  allLabel="All categories"
+                  basePath="/admin/units"
+                  param="category"
+                  current={category}
+                  extraParams={{ ...extras, category: undefined }}
+                  options={[
+                    ...categories.map((label) => ({
+                      value: label,
+                      label,
+                      count: loaded.filter((unit) =>
+                        matchesLabel(categoryOf(unit.productId), label),
+                      ).length,
+                    })),
+                    ...(uncategorized
+                      ? [
+                          {
+                            value: NONE,
+                            label: "Uncategorized",
+                            count: uncategorized,
+                          },
+                        ]
+                      : []),
+                  ]}
+                />
+              ) : null}
+              {sizes.length > 0 ? (
+                <FilterSelectNav
+                  label="Size"
+                  allLabel="All sizes"
+                  basePath="/admin/units"
+                  param="size"
+                  current={size}
+                  extraParams={{ ...extras, size: undefined }}
+                  options={sizes.map((label) => ({
+                    value: label,
+                    label,
+                    count: loaded.filter((unit) => unit.size === label).length,
+                  }))}
+                />
+              ) : null}
+              {conditions.length > 0 ? (
+                <FilterSelectNav
+                  label="Condition"
+                  allLabel="All conditions"
+                  basePath="/admin/units"
+                  param="condition"
+                  current={condition}
+                  extraParams={{ ...extras, condition: undefined }}
+                  options={conditions.map((value) => ({
+                    value,
+                    label: conditionAdminLabel(value as UnitCondition),
+                    count: loaded.filter((unit) => unit.condition === value)
+                      .length,
+                  }))}
+                />
+              ) : null}
+            </div>
+          </FiltersMenu>
         ) : null}
       </div>
 

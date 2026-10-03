@@ -6,6 +6,7 @@ import { ProductImage } from "@/components/ProductImage";
 import { AdminSearch } from "@/components/admin/AdminSearch";
 import { FilterTabs } from "@/components/admin/FilterTabs";
 import { CollapsibleFilters } from "@/components/CollapsibleFilters";
+import { FilterSelectNav, FiltersMenu } from "@/components/FilterSelect";
 
 const NONE = "__none__";
 
@@ -84,110 +85,108 @@ export default async function AdminProducts({
           <AdminSearch placeholder="Search products" defaultValue={search ?? ""} />
         </div>
 
-        {categories.length > 0 || uncategorized > 0 ? (
-          <div>
-            <p className="label">Category</p>
-            <FilterTabs
-              basePath="/admin/products"
-              param="category"
-              current={category}
-              extraParams={{ ...extras, category: undefined }}
-              options={[
-                { value: "", label: "All categories", count: allProducts.length },
-                ...categories.map((label) => ({
-                  value: label,
-                  label,
-                  count: allProducts.filter((p) => matchesLabel(p.category, label))
-                    .length,
-                })),
-                ...(uncategorized
-                  ? [
-                      {
-                        value: NONE,
-                        label: "Uncategorized",
-                        count: uncategorized,
-                      },
-                    ]
-                  : []),
-              ]}
-            />
-          </div>
-        ) : null}
-
-        {brands.length > 0 ? (
-          <div>
-            <p className="label">Brand</p>
-            <FilterTabs
-              basePath="/admin/products"
-              param="brand"
-              current={brand}
-              extraParams={{ ...extras, brand: undefined }}
-              options={[
-                { value: "", label: "All brands", count: allProducts.length },
-                ...brands.map((label) => ({
+        <FiltersMenu
+          activeCount={[category, brand, tag, visibility].filter(Boolean).length}
+        >
+          <div className="flex flex-wrap gap-3">
+            {categories.length > 0 || uncategorized > 0 ? (
+              <FilterSelectNav
+                label="Category"
+                allLabel="All categories"
+                basePath="/admin/products"
+                param="category"
+                current={category}
+                extraParams={{ ...extras, category: undefined }}
+                options={[
+                  ...categories.map((label) => ({
+                    value: label,
+                    label,
+                    count: allProducts.filter((p) =>
+                      matchesLabel(p.category, label),
+                    ).length,
+                  })),
+                  ...(uncategorized
+                    ? [
+                        {
+                          value: NONE,
+                          label: "Uncategorized",
+                          count: uncategorized,
+                        },
+                      ]
+                    : []),
+                ]}
+              />
+            ) : null}
+            {brands.length > 0 ? (
+              <FilterSelectNav
+                label="Brand"
+                allLabel="All brands"
+                basePath="/admin/products"
+                param="brand"
+                current={brand}
+                extraParams={{ ...extras, brand: undefined }}
+                options={brands.map((label) => ({
                   value: label,
                   label,
                   count: allProducts.filter((p) => matchesLabel(p.brand, label))
                     .length,
-                })),
+                }))}
+              />
+            ) : null}
+            <FilterSelectNav
+              label="Visibility"
+              allLabel="All"
+              basePath="/admin/products"
+              param="visibility"
+              current={visibility}
+              extraParams={{ ...extras, visibility: undefined }}
+              options={[
+                {
+                  value: "visible",
+                  label: "Visible",
+                  count: allProducts.filter((p) => p.active).length,
+                },
+                {
+                  value: "hidden",
+                  label: "Hidden",
+                  count: allProducts.filter((p) => !p.active).length,
+                },
               ]}
             />
           </div>
-        ) : null}
 
-        {tags.length > 0 ? (
-          <CollapsibleFilters
-            label="Tags"
-            summary={
-              tag ? (
-                <Link
-                  href={productsFilterHref({ ...extras, tag: undefined })}
-                  className="pill border border-ink bg-ink text-cream"
-                >
-                  {tag}
-                </Link>
-              ) : null
-            }
-          >
-            <FilterTabs
-              basePath="/admin/products"
-              param="tag"
-              current={tag}
-              extraParams={{ ...extras, tag: undefined }}
-              options={[
-                { value: "", label: "All tags", count: allProducts.length },
-                ...tags.map((label) => ({
-                  value: label,
-                  label,
-                  count: allProducts.filter((p) => hasTag(p.tags, label)).length,
-                })),
-              ]}
-            />
-          </CollapsibleFilters>
-        ) : null}
-
-        <div>
-          <p className="label">Visibility</p>
-          <FilterTabs
-            basePath="/admin/products"
-            param="visibility"
-            current={visibility}
-            extraParams={{ ...extras, visibility: undefined }}
-            options={[
-              { value: "", label: "All", count: allProducts.length },
-              {
-                value: "visible",
-                label: "Visible",
-                count: allProducts.filter((p) => p.active).length,
-              },
-              {
-                value: "hidden",
-                label: "Hidden",
-                count: allProducts.filter((p) => !p.active).length,
-              },
-            ]}
-          />
-        </div>
+          {tags.length > 0 ? (
+            <CollapsibleFilters
+              label="Tags"
+              summary={
+                tag ? (
+                  <Link
+                    href={productsFilterHref({ ...extras, tag: undefined })}
+                    className="pill border border-ink bg-ink text-cream"
+                  >
+                    {tag}
+                  </Link>
+                ) : null
+              }
+            >
+              <FilterTabs
+                basePath="/admin/products"
+                param="tag"
+                current={tag}
+                extraParams={{ ...extras, tag: undefined }}
+                options={[
+                  { value: "", label: "All tags", count: allProducts.length },
+                  ...tags.map((label) => ({
+                    value: label,
+                    label,
+                    count: allProducts.filter((p) => hasTag(p.tags, label))
+                      .length,
+                  })),
+                ]}
+              />
+            </CollapsibleFilters>
+          ) : null}
+        </FiltersMenu>
       </div>
 
       {products.length === 0 ? (

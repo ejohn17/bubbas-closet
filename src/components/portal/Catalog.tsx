@@ -7,6 +7,7 @@ import { AddToBoxControls } from "@/components/portal/AddToBoxControls";
 import { CatalogCarousel } from "@/components/portal/CatalogCarousel";
 import { GuestAddPrompt } from "@/components/portal/GuestAddPrompt";
 import { CollapsibleFilters } from "@/components/CollapsibleFilters";
+import { FilterSelect, FiltersMenu } from "@/components/FilterSelect";
 import { recommendTierFor } from "@/lib/config";
 import { hasTag, matchesLabel, uniqueLabels } from "@/lib/filters";
 import { formatDollars } from "@/lib/format";
@@ -118,10 +119,26 @@ export function Catalog({
   const picked = boxCount;
   const full = mode !== "guest" && picked >= itemLimit;
   const itemBase = mode === "guest" ? "/closet" : "/portal/item";
+  const hasOutOfStock = items.some((item) => item.sizes.length === 0);
+  const activeFilterCount = [
+    categoryFilter,
+    brandFilter,
+    tagFilter,
+    sizeFilter,
+    conditionFilter,
+    inStockOnly ? "in-stock" : "",
+  ].filter(Boolean).length;
+  const hasFilters =
+    categories.length > 0 ||
+    brands.length > 0 ||
+    tags.length > 0 ||
+    allSizes.length > 0 ||
+    conditions.length > 0 ||
+    hasOutOfStock;
 
   return (
     <div>
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-4">
         <input
           type="search"
           className="input max-w-xs"
@@ -131,86 +148,84 @@ export function Catalog({
           aria-label="Search the closet"
         />
 
-        <FilterRow
-          label="Category"
-          allLabel="All categories"
-          value={categoryFilter}
-          options={categories}
-          onChange={setCategoryFilter}
-        />
-        <FilterRow
-          label="Brand"
-          allLabel="All brands"
-          value={brandFilter}
-          options={brands}
-          onChange={setBrandFilter}
-        />
-        {tags.length > 0 ? (
-          <CollapsibleFilters
-            label="Tags"
-            summary={
-              tagFilter ? (
-                <FilterChip active onClick={() => setTagFilter("")}>
-                  {tagFilter}
-                </FilterChip>
-              ) : null
-            }
-          >
-            <div className="flex flex-wrap items-center gap-1.5">
-              <FilterChip
-                active={!tagFilter}
-                onClick={() => setTagFilter("")}
-              >
-                All tags
-              </FilterChip>
-              {tags.map((option) => (
-                <FilterChip
-                  key={option}
-                  active={tagFilter === option}
-                  onClick={() => setTagFilter(option)}
-                >
-                  {option}
-                </FilterChip>
-              ))}
+        {hasFilters ? (
+          <FiltersMenu activeCount={activeFilterCount}>
+            <div className="flex flex-wrap gap-3">
+              <FilterSelect
+                label="Category"
+                allLabel="All categories"
+                value={categoryFilter}
+                options={categories.map((value) => ({ value, label: value }))}
+                onChange={setCategoryFilter}
+              />
+              <FilterSelect
+                label="Brand"
+                allLabel="All brands"
+                value={brandFilter}
+                options={brands.map((value) => ({ value, label: value }))}
+                onChange={setBrandFilter}
+              />
+              <FilterSelect
+                label="Size"
+                allLabel="All sizes"
+                value={sizeFilter}
+                options={allSizes.map((value) => ({ value, label: value }))}
+                onChange={setSizeFilter}
+              />
+              <FilterSelect
+                label="Condition"
+                allLabel="All conditions"
+                value={conditionFilter}
+                options={conditions.map((value) => ({
+                  value,
+                  label: conditionLabel(
+                    value as Parameters<typeof conditionLabel>[0],
+                  ),
+                }))}
+                onChange={setConditionFilter}
+              />
+              {hasOutOfStock ? (
+                <FilterSelect
+                  label="Availability"
+                  allLabel="All pieces"
+                  value={inStockOnly ? "in-stock" : ""}
+                  options={[{ value: "in-stock", label: "In stock" }]}
+                  onChange={(value) => setInStockOnly(value === "in-stock")}
+                />
+              ) : null}
             </div>
-          </CollapsibleFilters>
-        ) : null}
-        <FilterRow
-          label="Size"
-          allLabel="All sizes"
-          value={sizeFilter}
-          options={allSizes}
-          onChange={setSizeFilter}
-        />
-        <FilterRow
-          label="Condition"
-          allLabel="All conditions"
-          value={conditionFilter}
-          options={conditions}
-          optionLabel={(value) =>
-            conditionLabel(value as Parameters<typeof conditionLabel>[0])
-          }
-          onChange={setConditionFilter}
-        />
 
-        {items.some((item) => item.sizes.length === 0) ? (
-          <div>
-            <p className="label">Availability</p>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <FilterChip
-                active={!inStockOnly}
-                onClick={() => setInStockOnly(false)}
+            {tags.length > 0 ? (
+              <CollapsibleFilters
+                label="Tags"
+                summary={
+                  tagFilter ? (
+                    <FilterChip active onClick={() => setTagFilter("")}>
+                      {tagFilter}
+                    </FilterChip>
+                  ) : null
+                }
               >
-                All pieces
-              </FilterChip>
-              <FilterChip
-                active={inStockOnly}
-                onClick={() => setInStockOnly(true)}
-              >
-                In stock
-              </FilterChip>
-            </div>
-          </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <FilterChip
+                    active={!tagFilter}
+                    onClick={() => setTagFilter("")}
+                  >
+                    All tags
+                  </FilterChip>
+                  {tags.map((option) => (
+                    <FilterChip
+                      key={option}
+                      active={tagFilter === option}
+                      onClick={() => setTagFilter(option)}
+                    >
+                      {option}
+                    </FilterChip>
+                  ))}
+                </div>
+              </CollapsibleFilters>
+            ) : null}
+          </FiltersMenu>
         ) : null}
       </div>
 
@@ -296,44 +311,6 @@ export function Catalog({
           })}
         </ul>
       )}
-    </div>
-  );
-}
-
-function FilterRow({
-  label,
-  allLabel,
-  value,
-  options,
-  optionLabel,
-  onChange,
-}: {
-  label: string;
-  allLabel: string;
-  value: string;
-  options: string[];
-  optionLabel?: (value: string) => string;
-  onChange: (value: string) => void;
-}) {
-  if (options.length === 0) return null;
-
-  return (
-    <div>
-      <p className="label">{label}</p>
-      <div className="flex flex-wrap items-center gap-1.5">
-        <FilterChip active={!value} onClick={() => onChange("")}>
-          {allLabel}
-        </FilterChip>
-        {options.map((option) => (
-          <FilterChip
-            key={option}
-            active={value === option}
-            onClick={() => onChange(option)}
-          >
-            {optionLabel ? optionLabel(option) : option}
-          </FilterChip>
-        ))}
-      </div>
     </div>
   );
 }
