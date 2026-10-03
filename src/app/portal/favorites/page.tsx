@@ -6,7 +6,7 @@ import { availabilityByProduct } from "@/lib/db/units";
 import { listFavoriteProductIds } from "@/lib/db/favorites";
 import { listHolds } from "@/lib/db/holds";
 import { Catalog } from "@/components/portal/Catalog";
-import { catalogSizes, type CatalogItem } from "@/lib/catalog";
+import { toCatalogItem, type CatalogItem } from "@/lib/catalog";
 
 export const metadata = { title: "Favorites" };
 
@@ -26,17 +26,12 @@ export default async function FavoritesPage() {
 
   const items: CatalogItem[] = products
     .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
-    .map((product) => ({
-      id: product.id,
-      title: product.title,
-      brand: product.brand,
-      category: product.category,
-      description: product.description,
-      images: product.images,
-      sizes: catalogSizes(availability[product.id]),
-      favorited: true,
-      inBox: boxProductIds.has(product.id),
-    }));
+    .map((product) =>
+      toCatalogItem(product, availability[product.id], {
+        favorited: true,
+        inBox: boxProductIds.has(product.id),
+      }),
+    );
 
   return (
     <div>

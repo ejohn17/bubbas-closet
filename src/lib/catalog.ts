@@ -12,6 +12,7 @@ export type CatalogItem = {
   title: string;
   brand?: string;
   category?: string;
+  tags?: string[];
   description: string;
   images: string[];
   /** Availability per size, with the condition the member would receive. */
@@ -38,6 +39,7 @@ export function toCatalogItem(
     title: string;
     brand?: string;
     category?: string;
+    tags?: string[];
     description: string;
     images: string[];
   },
@@ -49,6 +51,7 @@ export function toCatalogItem(
     title: product.title,
     brand: product.brand,
     category: product.category,
+    tags: product.tags,
     description: product.description,
     images: product.images,
     sizes: catalogSizes(availability),

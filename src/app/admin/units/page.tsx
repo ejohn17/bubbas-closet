@@ -1,11 +1,15 @@
 import Link from "next/link";
+import { listProducts } from "@/lib/db/products";
 import { countUnitsByStatus, listUnits } from "@/lib/db/units";
+import { matchesLabel, uniqueLabels } from "@/lib/filters";
+import { conditionAdminLabel, CONDITION_ORDER } from "@/lib/rules";
+import { compareSizes } from "@/lib/sizes";
 import { StatusPill } from "@/components/StatusPill";
 import { UnitActions } from "@/components/admin/UnitActions";
 import { FilterTabs } from "@/components/admin/FilterTabs";
 import { AdminSearch } from "@/components/admin/AdminSearch";
 import { formatDate } from "@/lib/format";
-import type { UnitStatus } from "@/lib/types";
+import type { UnitCondition, UnitStatus } from "@/lib/types";
 
 const STATUSES: UnitStatus[] = [
   "available",
@@ -15,18 +19,68 @@ const STATUSES: UnitStatus[] = [
   "retired",
 ];
 
+const NONE = "__none__";
+
 export default async function AdminUnits({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; search?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    search?: string;
+    category?: string;
+    size?: string;
+    condition?: string;
+  }>;
 }) {
-  const { status, search } = await searchParams;
-  const active = STATUSES.includes(status as UnitStatus) ? (status as UnitStatus) : "";
+  const {
+    status,
+    search,
+    category = "",
+    size = "",
+    condition = "",
+  } = await searchParams;
+  const active = STATUSES.includes(status as UnitStatus)
+    ? (status as UnitStatus)
+    : "";
 
-  const [counts, units] = await Promise.all([
+  const [counts, loaded, products] = await Promise.all([
     countUnitsByStatus(),
     listUnits({ status: active || undefined, search }),
+    listProducts(),
   ]);
+
+  const productById = new Map(products.map((product) => [product.id, product]));
+  const categoryOf = (productId: string) =>
+    productById.get(productId)?.category;
+
+  const categories = uniqueLabels(loaded.map((unit) => categoryOf(unit.productId)));
+  const sizes = uniqueLabels(loaded.map((unit) => unit.size)).sort(compareSizes);
+  const conditions = CONDITION_ORDER.filter((value) =>
+    loaded.some((unit) => unit.condition === value),
+  );
+  const uncategorized = loaded.filter(
+    (unit) => !categoryOf(unit.productId)?.trim(),
+  ).length;
+
+  const extras = {
+    search: search || undefined,
+    status: active || undefined,
+    category: category || undefined,
+    size: size || undefined,
+    condition: condition || undefined,
+  };
+
+  const units = loaded.filter((unit) => {
+    const productCategory = categoryOf(unit.productId);
+    if (category === NONE) {
+      if (productCategory?.trim()) return false;
+    } else if (category && !matchesLabel(productCategory, category)) {
+      return false;
+    }
+    if (size && unit.size !== size) return false;
+    if (condition && unit.condition !== condition) return false;
+    return true;
+  });
 
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
 
@@ -37,74 +91,162 @@ export default async function AdminUnits({
         Every physical garment, tracked individually.
       </p>
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-        <FilterTabs
-          basePath="/admin/units"
-          current={active}
-          extraParams={{ search: search || undefined }}
-          options={[
-            { value: "", label: "All", count: total },
-            ...STATUSES.map((s) => ({
-              value: s,
-              label: s === "out" ? "Out with members" : s,
-              count: counts[s],
-            })),
-          ]}
-        />
-        <div className="w-full max-w-xs">
-          <AdminSearch placeholder="Search by style or SKU" defaultValue={search ?? ""} />
+      <div className="mt-6 flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <FilterTabs
+            basePath="/admin/units"
+            current={active}
+            extraParams={{ ...extras, status: undefined }}
+            options={[
+              { value: "", label: "All", count: total },
+              ...STATUSES.map((s) => ({
+                value: s,
+                label: s === "out" ? "Out with members" : s,
+                count: counts[s],
+              })),
+            ]}
+          />
+          <div className="w-full max-w-xs">
+            <AdminSearch
+              placeholder="Search by style or SKU"
+              defaultValue={search ?? ""}
+            />
+          </div>
         </div>
+
+        {categories.length > 0 || uncategorized > 0 ? (
+          <div>
+            <p className="label">Category</p>
+            <FilterTabs
+              basePath="/admin/units"
+              param="category"
+              current={category}
+              extraParams={{ ...extras, category: undefined }}
+              options={[
+                { value: "", label: "All categories", count: loaded.length },
+                ...categories.map((label) => ({
+                  value: label,
+                  label,
+                  count: loaded.filter((unit) =>
+                    matchesLabel(categoryOf(unit.productId), label),
+                  ).length,
+                })),
+                ...(uncategorized
+                  ? [
+                      {
+                        value: NONE,
+                        label: "Uncategorized",
+                        count: uncategorized,
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+          </div>
+        ) : null}
+
+        {sizes.length > 0 ? (
+          <div>
+            <p className="label">Size</p>
+            <FilterTabs
+              basePath="/admin/units"
+              param="size"
+              current={size}
+              extraParams={{ ...extras, size: undefined }}
+              options={[
+                { value: "", label: "All sizes", count: loaded.length },
+                ...sizes.map((label) => ({
+                  value: label,
+                  label,
+                  count: loaded.filter((unit) => unit.size === label).length,
+                })),
+              ]}
+            />
+          </div>
+        ) : null}
+
+        {conditions.length > 0 ? (
+          <div>
+            <p className="label">Condition</p>
+            <FilterTabs
+              basePath="/admin/units"
+              param="condition"
+              current={condition}
+              extraParams={{ ...extras, condition: undefined }}
+              options={[
+                { value: "", label: "All conditions", count: loaded.length },
+                ...conditions.map((value) => ({
+                  value,
+                  label: conditionAdminLabel(value as UnitCondition),
+                  count: loaded.filter((unit) => unit.condition === value)
+                    .length,
+                })),
+              ]}
+            />
+          </div>
+        ) : null}
       </div>
 
       {units.length === 0 ? (
         <p className="card mt-8 p-8 text-center text-stone">
-          Nothing here.{" "}
-          <Link href="/admin/products" className="link text-ink">
-            Add inventory from a product
-          </Link>
-          .
+          {search || category || size || condition ? (
+            "No garments match those filters."
+          ) : (
+            <>
+              Nothing here.{" "}
+              <Link href="/admin/products" className="link text-ink">
+                Add inventory from a product
+              </Link>
+              .
+            </>
+          )}
         </p>
       ) : (
         <ul className="card mt-8 divide-y divide-line">
-          {units.map((unit) => (
-            <li
-              key={unit.id}
-              className="flex flex-wrap items-center justify-between gap-3 p-4"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">
-                  <Link
-                    href={`/admin/products/${unit.productId}`}
-                    className="hover:text-accent-dark"
-                  >
-                    {unit.productTitle}
-                  </Link>
-                  <span className="ml-2 font-normal text-stone">
-                    size {unit.size}
-                  </span>
-                </p>
-                <p className="mt-1 flex items-center gap-2 text-xs text-stone">
-                  <StatusPill status={unit.status} />
-                  <span>{unit.sku ?? unit.id.slice(0, 6)}</span>
-                  {unit.pickId ? (
-                    <Link
-                      href={`/admin/orders/${unit.pickId}`}
-                      className="link text-stone"
-                    >
-                      on order
-                    </Link>
-                  ) : null}
-                  <span>added {formatDate(unit.createdAt)}</span>
-                </p>
-              </div>
+          {units.map((unit) => {
+            const product = productById.get(unit.productId);
 
-              <UnitActions
-                unitId={unit.id}
-                status={unit.status}
-                condition={unit.condition}
-              />
-            </li>
-          ))}
+            return (
+              <li
+                key={unit.id}
+                className="flex flex-wrap items-center justify-between gap-3 p-4"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">
+                    <Link
+                      href={`/admin/products/${unit.productId}`}
+                      className="hover:text-accent-dark"
+                    >
+                      {unit.productTitle}
+                    </Link>
+                    <span className="ml-2 font-normal text-stone">
+                      size {unit.size}
+                      {product?.category ? ` · ${product.category}` : ""}
+                    </span>
+                  </p>
+                  <p className="mt-1 flex items-center gap-2 text-xs text-stone">
+                    <StatusPill status={unit.status} />
+                    <span>{unit.sku ?? unit.id.slice(0, 6)}</span>
+                    {unit.pickId ? (
+                      <Link
+                        href={`/admin/orders/${unit.pickId}`}
+                        className="link text-stone"
+                      >
+                        on order
+                      </Link>
+                    ) : null}
+                    <span>added {formatDate(unit.createdAt)}</span>
+                  </p>
+                </div>
+
+                <UnitActions
+                  unitId={unit.id}
+                  status={unit.status}
+                  condition={unit.condition}
+                />
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

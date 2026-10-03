@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { FavoriteButton } from "@/components/portal/FavoriteButton";
 import { AddToBoxControls } from "@/components/portal/AddToBoxControls";
 import { CatalogCarousel } from "@/components/portal/CatalogCarousel";
 import { GuestAddPrompt } from "@/components/portal/GuestAddPrompt";
 import { recommendTierFor } from "@/lib/config";
+import { hasTag, matchesLabel, uniqueLabels } from "@/lib/filters";
 import { formatDollars } from "@/lib/format";
 import { bestCondition, conditionLabel } from "@/lib/rules";
 import { compareSizes } from "@/lib/sizes";
@@ -41,6 +42,11 @@ export function Catalog({
   mode?: CatalogMode;
 }) {
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [brandFilter, setBrandFilter] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
+  const [conditionFilter, setConditionFilter] = useState("");
+  const [inStockOnly, setInStockOnly] = useState(false);
   const [sizeFilter, setSizeFilter] = useState<string>(
     defaultSize &&
       items.some((i) => i.sizes.some((s) => s.size === defaultSize))
@@ -52,6 +58,23 @@ export function Catalog({
     [items],
   );
 
+  const categories = useMemo(
+    () => uniqueLabels(items.map((item) => item.category)),
+    [items],
+  );
+  const brands = useMemo(
+    () => uniqueLabels(items.map((item) => item.brand)),
+    [items],
+  );
+  const tags = useMemo(
+    () => uniqueLabels(items.flatMap((item) => item.tags ?? [])),
+    [items],
+  );
+  const conditions = useMemo(
+    () =>
+      uniqueLabels(items.flatMap((item) => item.sizes.map((s) => s.condition))),
+    [items],
+  );
   const allSizes = useMemo(() => {
     const set = new Set<string>();
     for (const item of items) for (const s of item.sizes) set.add(s.size);
@@ -61,16 +84,35 @@ export function Catalog({
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     return items.filter((item) => {
+      if (categoryFilter && !matchesLabel(item.category, categoryFilter))
+        return false;
+      if (brandFilter && !matchesLabel(item.brand, brandFilter)) return false;
+      if (tagFilter && !hasTag(item.tags, tagFilter)) return false;
+      if (inStockOnly && item.sizes.length === 0) return false;
       if (sizeFilter && !item.sizes.some((s) => s.size === sizeFilter))
         return false;
+      if (
+        conditionFilter &&
+        !item.sizes.some((s) => matchesLabel(s.condition, conditionFilter))
+      )
+        return false;
       if (!term) return true;
-      return [item.title, item.brand, item.category, item.description]
+      return [item.title, item.brand, item.category, item.description, ...(item.tags ?? [])]
         .filter(Boolean)
         .join(" ")
         .toLowerCase()
         .includes(term);
     });
-  }, [items, search, sizeFilter]);
+  }, [
+    items,
+    search,
+    categoryFilter,
+    brandFilter,
+    tagFilter,
+    inStockOnly,
+    sizeFilter,
+    conditionFilter,
+  ]);
 
   const picked = boxCount;
   const full = mode !== "guest" && picked >= itemLimit;
@@ -78,7 +120,7 @@ export function Catalog({
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col gap-5">
         <input
           type="search"
           className="input max-w-xs"
@@ -88,33 +130,64 @@ export function Catalog({
           aria-label="Search the closet"
         />
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setSizeFilter("")}
-            className={`pill border ${
-              sizeFilter === ""
-                ? "border-ink bg-ink text-cream"
-                : "border-line bg-card text-stone hover:border-accent"
-            }`}
-          >
-            All sizes
-          </button>
-          {allSizes.map((size) => (
-            <button
-              key={size}
-              type="button"
-              onClick={() => setSizeFilter(size)}
-              className={`pill border ${
-                sizeFilter === size
-                  ? "border-ink bg-ink text-cream"
-                  : "border-line bg-card text-stone hover:border-accent"
-              }`}
-            >
-              {size}
-            </button>
-          ))}
-        </div>
+        <FilterRow
+          label="Category"
+          allLabel="All categories"
+          value={categoryFilter}
+          options={categories}
+          onChange={setCategoryFilter}
+        />
+        <FilterRow
+          label="Brand"
+          allLabel="All brands"
+          value={brandFilter}
+          options={brands}
+          onChange={setBrandFilter}
+        />
+        <FilterRow
+          label="Tags"
+          allLabel="All tags"
+          value={tagFilter}
+          options={tags}
+          onChange={setTagFilter}
+        />
+        <FilterRow
+          label="Size"
+          allLabel="All sizes"
+          value={sizeFilter}
+          options={allSizes}
+          onChange={setSizeFilter}
+        />
+        <FilterRow
+          label="Condition"
+          allLabel="All conditions"
+          value={conditionFilter}
+          options={conditions}
+          optionLabel={(value) =>
+            conditionLabel(value as Parameters<typeof conditionLabel>[0])
+          }
+          onChange={setConditionFilter}
+        />
+
+        {items.some((item) => item.sizes.length === 0) ? (
+          <div>
+            <p className="label">Availability</p>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <FilterChip
+                active={!inStockOnly}
+                onClick={() => setInStockOnly(false)}
+              >
+                All pieces
+              </FilterChip>
+              <FilterChip
+                active={inStockOnly}
+                onClick={() => setInStockOnly(true)}
+              >
+                In stock
+              </FilterChip>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <p className="mt-4 text-sm text-stone">
@@ -123,7 +196,7 @@ export function Catalog({
 
       {visible.length === 0 ? (
         <p className="mt-16 text-center text-stone">
-          Nothing matches that yet. Try another size or search.
+          Nothing matches that yet. Try another filter or search.
         </p>
       ) : (
         <ul className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -163,8 +236,10 @@ export function Catalog({
                     <h3 className="font-medium transition group-hover:text-accent-dark">
                       {item.title}
                     </h3>
-                    {item.brand ? (
-                      <p className="mt-0.5 text-sm text-stone">{item.brand}</p>
+                    {item.brand || item.category ? (
+                      <p className="mt-0.5 text-sm text-stone">
+                        {[item.brand, item.category].filter(Boolean).join(" · ")}
+                      </p>
                     ) : null}
                     {item.description ? (
                       <p className="mt-2 line-clamp-2 text-sm text-stone">
@@ -198,6 +273,69 @@ export function Catalog({
         </ul>
       )}
     </div>
+  );
+}
+
+function FilterRow({
+  label,
+  allLabel,
+  value,
+  options,
+  optionLabel,
+  onChange,
+}: {
+  label: string;
+  allLabel: string;
+  value: string;
+  options: string[];
+  optionLabel?: (value: string) => string;
+  onChange: (value: string) => void;
+}) {
+  if (options.length === 0) return null;
+
+  return (
+    <div>
+      <p className="label">{label}</p>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <FilterChip active={!value} onClick={() => onChange("")}>
+          {allLabel}
+        </FilterChip>
+        {options.map((option) => (
+          <FilterChip
+            key={option}
+            active={value === option}
+            onClick={() => onChange(option)}
+          >
+            {optionLabel ? optionLabel(option) : option}
+          </FilterChip>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FilterChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`pill border ${
+        active
+          ? "border-ink bg-ink text-cream"
+          : "border-line bg-card text-stone hover:border-accent"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 

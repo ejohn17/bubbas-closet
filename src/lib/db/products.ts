@@ -54,7 +54,10 @@ export async function listProducts(options?: {
     );
   }
   if (options?.category) {
-    products = products.filter((p) => p.category === options.category);
+    const wanted = options.category.trim().toLowerCase();
+    products = products.filter(
+      (p) => (p.category ?? "").trim().toLowerCase() === wanted,
+    );
   }
 
   return products.sort((a, b) => a.title.localeCompare(b.title));

@@ -1,19 +1,56 @@
 import Link from "next/link";
 import { listProducts } from "@/lib/db/products";
 import { availabilityByProduct } from "@/lib/db/units";
+import { hasTag, matchesLabel, uniqueLabels } from "@/lib/filters";
 import { ProductImage } from "@/components/ProductImage";
 import { AdminSearch } from "@/components/admin/AdminSearch";
+import { FilterTabs } from "@/components/admin/FilterTabs";
+
+const NONE = "__none__";
 
 export default async function AdminProducts({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string }>;
+  searchParams: Promise<{
+    search?: string;
+    category?: string;
+    brand?: string;
+    tag?: string;
+    visibility?: string;
+  }>;
 }) {
-  const { search } = await searchParams;
-  const [products, availability] = await Promise.all([
+  const { search, category = "", brand = "", tag = "", visibility = "" } =
+    await searchParams;
+  const [allProducts, availability] = await Promise.all([
     listProducts({ search }),
     availabilityByProduct(),
   ]);
+
+  const categories = uniqueLabels(allProducts.map((p) => p.category));
+  const brands = uniqueLabels(allProducts.map((p) => p.brand));
+  const tags = uniqueLabels(allProducts.flatMap((p) => p.tags ?? []));
+  const uncategorized = allProducts.filter((p) => !p.category?.trim()).length;
+
+  const extras = {
+    search: search || undefined,
+    category: category || undefined,
+    brand: brand || undefined,
+    tag: tag || undefined,
+    visibility: visibility || undefined,
+  };
+
+  const products = allProducts.filter((product) => {
+    if (category === NONE) {
+      if (product.category?.trim()) return false;
+    } else if (category && !matchesLabel(product.category, category)) {
+      return false;
+    }
+    if (brand && !matchesLabel(product.brand, brand)) return false;
+    if (tag && !hasTag(product.tags, tag)) return false;
+    if (visibility === "visible" && !product.active) return false;
+    if (visibility === "hidden" && product.active) return false;
+    return true;
+  });
 
   return (
     <div>
@@ -30,14 +67,110 @@ export default async function AdminProducts({
         </Link>
       </div>
 
-      <div className="mt-6 max-w-sm">
-        <AdminSearch placeholder="Search products" defaultValue={search ?? ""} />
+      <div className="mt-6 flex flex-col gap-4">
+        <div className="max-w-sm">
+          <AdminSearch placeholder="Search products" defaultValue={search ?? ""} />
+        </div>
+
+        {categories.length > 0 || uncategorized > 0 ? (
+          <div>
+            <p className="label">Category</p>
+            <FilterTabs
+              basePath="/admin/products"
+              param="category"
+              current={category}
+              extraParams={{ ...extras, category: undefined }}
+              options={[
+                { value: "", label: "All categories", count: allProducts.length },
+                ...categories.map((label) => ({
+                  value: label,
+                  label,
+                  count: allProducts.filter((p) => matchesLabel(p.category, label))
+                    .length,
+                })),
+                ...(uncategorized
+                  ? [
+                      {
+                        value: NONE,
+                        label: "Uncategorized",
+                        count: uncategorized,
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+          </div>
+        ) : null}
+
+        {brands.length > 0 ? (
+          <div>
+            <p className="label">Brand</p>
+            <FilterTabs
+              basePath="/admin/products"
+              param="brand"
+              current={brand}
+              extraParams={{ ...extras, brand: undefined }}
+              options={[
+                { value: "", label: "All brands", count: allProducts.length },
+                ...brands.map((label) => ({
+                  value: label,
+                  label,
+                  count: allProducts.filter((p) => matchesLabel(p.brand, label))
+                    .length,
+                })),
+              ]}
+            />
+          </div>
+        ) : null}
+
+        {tags.length > 0 ? (
+          <div>
+            <p className="label">Tags</p>
+            <FilterTabs
+              basePath="/admin/products"
+              param="tag"
+              current={tag}
+              extraParams={{ ...extras, tag: undefined }}
+              options={[
+                { value: "", label: "All tags", count: allProducts.length },
+                ...tags.map((label) => ({
+                  value: label,
+                  label,
+                  count: allProducts.filter((p) => hasTag(p.tags, label)).length,
+                })),
+              ]}
+            />
+          </div>
+        ) : null}
+
+        <div>
+          <p className="label">Visibility</p>
+          <FilterTabs
+            basePath="/admin/products"
+            param="visibility"
+            current={visibility}
+            extraParams={{ ...extras, visibility: undefined }}
+            options={[
+              { value: "", label: "All", count: allProducts.length },
+              {
+                value: "visible",
+                label: "Visible",
+                count: allProducts.filter((p) => p.active).length,
+              },
+              {
+                value: "hidden",
+                label: "Hidden",
+                count: allProducts.filter((p) => !p.active).length,
+              },
+            ]}
+          />
+        </div>
       </div>
 
       {products.length === 0 ? (
         <p className="card mt-8 p-8 text-center text-stone">
-          {search
-            ? "No products match that search."
+          {search || category || brand || tag || visibility
+            ? "No products match those filters."
             : "No products yet. Create your first style to start stocking the closet."}
         </p>
       ) : (
