@@ -78,7 +78,13 @@ test("a visitor browses the closet, builds a box, and subscribes", async ({
     expect(id, "Checkout should be a test-mode session").toBeTruthy();
 
     await payWithTestCard(page);
-    await page.waitForURL(/\/portal\?welcome=1$/, { timeout: 90_000 });
+    try {
+      await page.waitForURL(/\/portal\?welcome=1$/, { timeout: 90_000 });
+    } catch (err) {
+      throw new Error(`Stripe never redirected back. ${await describeCheckout(page)}`, {
+        cause: err,
+      });
+    }
     return id as string;
   });
 
@@ -135,6 +141,25 @@ async function payWithTestCard(page: Page) {
   if (await billingName.isVisible()) await billingName.fill("E2E Parent");
 
   await page.locator('[data-testid="hosted-payment-submit-button"]').click();
+}
+
+/** What Checkout is showing instead of redirecting, for the failure message. */
+async function describeCheckout(page: Page): Promise<string> {
+  const errors = await page
+    .locator('[role="alert"], .FieldError, [class*="Error"]:visible')
+    .allInnerTexts()
+    .catch(() => []);
+  const captcha = await page
+    .locator('iframe[src*="hcaptcha"][title*="challenge" i]')
+    .isVisible()
+    .catch(() => false);
+  return [
+    `Still on ${page.url()}.`,
+    captcha ? "A visible hCaptcha challenge is blocking payment." : "No visible captcha.",
+    errors.filter((t) => t.trim()).length
+      ? `Messages on the page: ${errors.filter((t) => t.trim()).join(" | ")}`
+      : "No error messages on the page.",
+  ].join(" ");
 }
 
 /**
