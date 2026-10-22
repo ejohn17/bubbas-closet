@@ -179,6 +179,14 @@ fetches the real `checkout.session.completed` event from Stripe and posts it,
 signed, to `/api/stripe/webhook`. Each run deletes the Stripe test customer it
 created.
 
+In CI the test stops at Stripe's hosted Checkout page: its bot protection
+silently blocks automated payments from CI runners. It checks the session the
+app created (test mode, the Essential price, Canada-only shipping, the
+member's id, the return URL), completes the subscription through the Stripe API
+with the same test card, and sends the resulting event through the same signed
+webhook. Locally it fills in the real page; set `E2E_CHECKOUT_UI=1` to do that
+in CI too.
+
 ## CI
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs lint, type-check,

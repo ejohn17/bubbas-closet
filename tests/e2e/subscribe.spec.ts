@@ -1,9 +1,24 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import Stripe from "stripe";
-import { requireE2eEnv, SEED, WEBHOOK_SECRET } from "./env";
+import { BASE_URL, requireE2eEnv, SEED, WEBHOOK_SECRET } from "./env";
 
 const env = requireE2eEnv();
 const stripe = new Stripe(env.stripeKey);
+
+/**
+ * Stripe's hosted Checkout page runs bot protection that silently blocks
+ * automated payments from CI runners, so CI completes the purchase through the
+ * Stripe API instead. Set E2E_CHECKOUT_UI=1 to drive the page anyway.
+ */
+const driveCheckoutPage = !process.env.CI || process.env.E2E_CHECKOUT_UI === "1";
+
+const ADDRESS = {
+  name: "E2E Parent",
+  line1: "1 Main St",
+  city: "Toronto",
+  province: "ON",
+  postalCode: "M5V 1A1",
+};
 
 let customerToCleanUp: string | null = null;
 
@@ -72,24 +87,48 @@ test("a visitor browses the closet, builds a box, and subscribes", async ({
     }
   });
 
-  const sessionId = await test.step("pay on Stripe Checkout (test mode)", async () => {
+  const session = await test.step("land on a test-mode Stripe Checkout for Essential", async () => {
     await page.waitForURL(/checkout\.stripe\.com/, { timeout: 60_000 });
     const id = page.url().match(/cs_test_[A-Za-z0-9]+/)?.[0];
     expect(id, "Checkout should be a test-mode session").toBeTruthy();
 
-    await payWithTestCard(page);
-    try {
-      await page.waitForURL(/\/portal\?welcome=1$/, { timeout: 90_000 });
-    } catch (err) {
-      throw new Error(`Stripe never redirected back. ${await describeCheckout(page)}`, {
-        cause: err,
-      });
-    }
-    return id as string;
+    const created = await stripe.checkout.sessions.retrieve(id as string, {
+      expand: ["line_items"],
+    });
+    customerToCleanUp = idOf(created.customer);
+
+    expect(created.mode).toBe("subscription");
+    expect(created.line_items?.data[0]?.price?.id).toBe(env.prices.essential);
+    expect(created.metadata).toMatchObject({ tierId: "essential" });
+    expect(created.metadata?.uid).toBeTruthy();
+    expect(created.shipping_address_collection?.allowed_countries).toEqual(["CA"]);
+    expect(created.success_url).toBe(`${BASE_URL}/portal?welcome=1`);
+    return created;
   });
 
+  const completed = await test.step(
+    driveCheckoutPage ? "pay on the Checkout page with the 4242 card" : "pay through the Stripe API",
+    async () => {
+      if (!driveCheckoutPage) {
+        const event = await completeWithoutCheckoutPage(session);
+        await page.goto(session.success_url as string);
+        return event;
+      }
+
+      await payWithTestCard(page);
+      try {
+        await page.waitForURL(/\/portal\?welcome=1$/, { timeout: 90_000 });
+      } catch (err) {
+        throw new Error(`Stripe never redirected back. ${await describeCheckout(page)}`, {
+          cause: err,
+        });
+      }
+      return findCompletedEvent(session.id, startedAt);
+    },
+  );
+
   await test.step("Stripe's webhook activates the membership", async () => {
-    customerToCleanUp = await deliverCheckoutCompleted(request, sessionId, startedAt);
+    await deliverWebhook(request, completed);
 
     await page.reload();
     await expect(page.getByText("You're in.")).toBeVisible();
@@ -110,7 +149,7 @@ test("a visitor browses the closet, builds a box, and subscribes", async ({
 async function payWithTestCard(page: Page) {
   const shippingName = page.locator("#shippingName");
   await shippingName.waitFor({ timeout: 60_000 });
-  await shippingName.fill("E2E Parent");
+  await shippingName.fill(ADDRESS.name);
 
   // Locked to Canada (and disabled) when the plan only ships there.
   const country = page.locator("#shippingCountry");
@@ -121,12 +160,11 @@ async function payWithTestCard(page: Page) {
   const manualEntry = page.getByText(/enter address manually/i);
   if (await manualEntry.isVisible()) await manualEntry.click();
 
-  await page.locator("#shippingAddressLine1").fill("1 Main St");
-  await page.locator("#shippingLocality").fill("Toronto");
-  await page.locator("#shippingPostalCode").fill("M5V 1A1");
-  await page.locator("#shippingAdministrativeArea").selectOption("ON");
+  await page.locator("#shippingAddressLine1").fill(ADDRESS.line1);
+  await page.locator("#shippingLocality").fill(ADDRESS.city);
+  await page.locator("#shippingPostalCode").fill(ADDRESS.postalCode);
+  await page.locator("#shippingAdministrativeArea").selectOption(ADDRESS.province);
 
-  // With more than one payment method enabled, card has to be chosen first.
   // With several payment methods, card sits in an accordion row covered by a
   // transparent "Pay with card" button that Playwright never considers
   // visible. A forced click at the label lands on that button, as a user's would.
@@ -138,57 +176,107 @@ async function payWithTestCard(page: Page) {
   await page.locator("#cardCvc").fill("123");
 
   const billingName = page.locator("#billingName");
-  if (await billingName.isVisible()) await billingName.fill("E2E Parent");
+  if (await billingName.isVisible()) await billingName.fill(ADDRESS.name);
 
   await page.locator('[data-testid="hosted-payment-submit-button"]').click();
 }
 
 /** What Checkout is showing instead of redirecting, for the failure message. */
 async function describeCheckout(page: Page): Promise<string> {
-  const errors = await page
-    .locator('[role="alert"], .FieldError, [class*="Error"]:visible')
-    .allInnerTexts()
-    .catch(() => []);
-  const captcha = await page
-    .locator('iframe[src*="hcaptcha"][title*="challenge" i]')
-    .isVisible()
-    .catch(() => false);
+  const errors = (
+    await page
+      .locator('[role="alert"], .FieldError')
+      .allInnerTexts()
+      .catch(() => [])
+  ).filter((t) => t.trim());
   return [
     `Still on ${page.url()}.`,
-    captcha ? "A visible hCaptcha challenge is blocking payment." : "No visible captcha.",
-    errors.filter((t) => t.trim()).length
-      ? `Messages on the page: ${errors.filter((t) => t.trim()).join(" | ")}`
-      : "No error messages on the page.",
+    errors.length
+      ? `Messages on the page: ${errors.join(" | ")}`
+      : "No error messages on the page (bot protection blocks silently).",
   ].join(" ");
 }
 
 /**
- * Forwards the real `checkout.session.completed` event to the app's webhook,
- * signed the way Stripe signs it. A CI runner has no public URL for Stripe to
- * call, so the suite does the delivery; the handler still verifies the
- * signature and fetches the subscription from Stripe as it does in production.
+ * Does what a successful Checkout does, through the API: subscribes the
+ * session's customer to the session's price with the 4242 test card, carrying
+ * the same metadata, and returns the `checkout.session.completed` event Stripe
+ * would send. The open session is expired so it can't be paid later.
  */
-async function deliverCheckoutCompleted(
-  request: APIRequestContext,
-  sessionId: string,
-  since: number,
-): Promise<string | null> {
-  let event: Stripe.Event | undefined;
-  for (let attempt = 0; attempt < 30 && !event; attempt += 1) {
+async function completeWithoutCheckoutPage(
+  session: Stripe.Checkout.Session,
+): Promise<Stripe.Event> {
+  const customer = idOf(session.customer);
+  const priceId = session.line_items?.data[0]?.price?.id;
+  if (!customer || !priceId) throw new Error("Checkout session has no customer or price");
+
+  const card = await stripe.paymentMethods.attach("pm_card_visa", { customer });
+  const subscription = await stripe.subscriptions.create({
+    customer,
+    items: [{ price: priceId }],
+    default_payment_method: card.id,
+    metadata: session.metadata ?? {},
+  });
+  expect(subscription.status).toBe("active");
+  await stripe.checkout.sessions.expire(session.id);
+
+  const object = {
+    ...session,
+    line_items: undefined,
+    status: "complete",
+    payment_status: "paid",
+    subscription: subscription.id,
+    collected_information: {
+      shipping_details: {
+        name: ADDRESS.name,
+        address: {
+          line1: ADDRESS.line1,
+          line2: null,
+          city: ADDRESS.city,
+          state: ADDRESS.province,
+          postal_code: ADDRESS.postalCode,
+          country: "CA",
+        },
+      },
+    },
+  };
+  return {
+    id: `evt_e2e_${Date.now()}`,
+    object: "event",
+    type: "checkout.session.completed",
+    api_version: null,
+    created: Math.floor(Date.now() / 1000),
+    livemode: false,
+    pending_webhooks: 0,
+    request: { id: null, idempotency_key: null },
+    data: { object },
+  } as unknown as Stripe.Event;
+}
+
+/** The real `checkout.session.completed` event for a session paid on the page. */
+async function findCompletedEvent(sessionId: string, since: number): Promise<Stripe.Event> {
+  for (let attempt = 0; attempt < 30; attempt += 1) {
     const { data } = await stripe.events.list({
       type: "checkout.session.completed",
       created: { gte: since },
       limit: 50,
     });
-    event = data.find(
+    const event = data.find(
       (e) => (e.data.object as Stripe.Checkout.Session).id === sessionId,
     );
-    if (!event) await new Promise((r) => setTimeout(r, 1000));
+    if (event) return event;
+    await new Promise((r) => setTimeout(r, 1000));
   }
-  if (!event) {
-    throw new Error(`Stripe never reported checkout.session.completed for ${sessionId}`);
-  }
+  throw new Error(`Stripe never reported checkout.session.completed for ${sessionId}`);
+}
 
+/**
+ * Posts the event to the app's webhook, signed the way Stripe signs it. A CI
+ * runner has no public URL for Stripe to call, so the suite does the delivery;
+ * the handler still verifies the signature and fetches the subscription from
+ * Stripe as it does in production.
+ */
+async function deliverWebhook(request: APIRequestContext, event: Stripe.Event) {
   const payload = JSON.stringify(event);
   const res = await request.post("/api/stripe/webhook", {
     data: payload,
@@ -201,9 +289,9 @@ async function deliverCheckoutCompleted(
     },
   });
   expect(res.status(), await res.text()).toBe(200);
+}
 
-  const session = event.data.object as Stripe.Checkout.Session;
-  return typeof session.customer === "string"
-    ? session.customer
-    : (session.customer?.id ?? null);
+function idOf(value: string | { id: string } | null | undefined): string | null {
+  if (!value) return null;
+  return typeof value === "string" ? value : value.id;
 }
