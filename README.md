@@ -122,6 +122,8 @@ src/components/     UI; admin/ and portal/ subfolders
 src/lib/            config, session, billing, email, format
 src/lib/db/         Firestore data layer (users, subscriptions, products,
                     units, holds, picks, favorites)
+tests/unit/         Vitest unit tests
+tests/e2e/          Playwright end-to-end test
 ```
 
 The data layer keeps queries to a single equality filter and refines in memory,
@@ -141,10 +143,49 @@ so no composite Firestore indexes are needed at this catalogue size.
 Custom domain: add it in App Hosting, then create the DNS records at the
 registrar (Squarespace) — see `../wiki/landing-page-waitlist.md`.
 
+## Testing
+
+**Unit tests** (`tests/unit`, Vitest) cover the tier limits and the rental
+state machine: reserving a garment into a box, the per-plan item limit, hold
+expiry and the release sweep, confirming a box into a pick, returns, retiring
+garments graded `fair`, and cancellation. The Firestore data layer runs against
+an in-memory stand-in (`tests/unit/support/fake-firestore.ts`) whose
+transactions are all-or-nothing, so the tests also check that a rejected add or
+confirm leaves inventory untouched. No credentials or emulators needed:
+
+```bash
+npm test                     # or npm run test:watch
+```
+
+**End-to-end test** (`tests/e2e`, Playwright) walks the whole signup path in
+Chromium: browse the public closet → create an account → add a piece → review
+the box → pick the recommended plan → pay on Stripe Checkout with the `4242`
+test card → membership active with the box ready to confirm. It runs against
+the Firebase **Auth and Firestore emulators** (project `demo-bubbas`, which
+can't reach a real Firebase project) and **Stripe test mode**:
+
+```bash
+# once: STRIPE_TEST_SECRET_KEY=sk_test_... in .env.e2e (gitignored), then
+npx playwright install chromium
+npm run test:e2e             # extra args go to Playwright, e.g. -- --headed
+```
+
+Needs Java 21+ for the Firestore emulator. The first run creates three monthly
+CAD prices in your Stripe **test** account (lookup keys `bubbas_e2e_*`) and
+reuses them afterwards. The run refuses to start without a `sk_test_` key, and
+every Stripe and Firebase variable the server reads is overridden, so the live
+values in `.env` are never used. Stripe can't reach a CI runner, so the test
+fetches the real `checkout.session.completed` event from Stripe and posts it,
+signed, to `/api/stripe/webhook`. Each run deletes the Stripe test customer it
+created.
+
 ## CI
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs lint, type-check,
-and a production build on every push and pull request.
+unit tests, and a production build on every push and pull request, then the
+end-to-end test against a production build. The e2e job needs a
+`STRIPE_TEST_SECRET_KEY` repository secret (Settings → Secrets and variables →
+Actions) and fails with a message saying so if it's missing.
 
 ## Scripts
 
@@ -153,3 +194,5 @@ and a production build on every push and pull request.
 - `npm run start` — serve the production build
 - `npm run lint` — ESLint
 - `npm run typecheck` — TypeScript, no emit
+- `npm test` — unit tests (Vitest)
+- `npm run test:e2e` — end-to-end test (Playwright + Firebase emulators + Stripe test mode)

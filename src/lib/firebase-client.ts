@@ -2,6 +2,7 @@
 
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import {
+  connectAuthEmulator,
   getAuth,
   GoogleAuthProvider,
   type Auth,
@@ -27,6 +28,9 @@ const config = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+/** Set only by the end-to-end suite, which runs against the Auth emulator. */
+const authEmulatorHost = process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST;
+
 export function isAuthConfigured(): boolean {
   return Boolean(config.apiKey && config.authDomain && config.projectId);
 }
@@ -38,6 +42,11 @@ function clientApp(): FirebaseApp {
 
 export function clientAuth(): Auth {
   const auth = getAuth(clientApp());
+  if (authEmulatorHost && !auth.emulatorConfig) {
+    connectAuthEmulator(auth, `http://${authEmulatorHost}`, {
+      disableWarnings: true,
+    });
+  }
   void setPersistence(auth, browserSessionPersistence).catch(() => {
     // Non-fatal: sign-in still works, it just won't survive a reload before
     // the session cookie is set.
