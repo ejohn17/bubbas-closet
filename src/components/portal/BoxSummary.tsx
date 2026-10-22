@@ -7,7 +7,7 @@ import { ProductImage } from "@/components/ProductImage";
 import { useHoldClock } from "@/components/portal/HoldBanner";
 import { recommendTierFor } from "@/lib/config";
 import { conditionLabel, estimateOutboundShippingCents, RULES } from "@/lib/rules";
-import { formatDollars, formatMoney } from "@/lib/format";
+import { formatDollars, formatCad } from "@/lib/format";
 import type { UnitCondition } from "@/lib/types";
 
 export type BoxHold = {
@@ -224,7 +224,7 @@ export function BoxSummary({
                 </p>
               ) : (
                 <p className="mt-1 max-w-sm text-sm text-stone">
-                  Estimated shipping {formatMoney(shipping)} — not the actual
+                  Estimated shipping {formatCad(shipping)} — not the actual
                   cost. Real postage is calculated when your box ships.
                 </p>
               )

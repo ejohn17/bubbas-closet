@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PickStatus, UnitCondition } from "@/lib/types";
-import { formatMoney } from "@/lib/format";
+import { formatCad } from "@/lib/format";
 import {
   CONDITION_ORDER,
   conditionAdminLabel,
@@ -139,8 +139,8 @@ export function OrderActions({
             {shippingFree
               ? "Premier includes outbound shipping — the member will not be charged. Adding tracking emails them automatically."
               : estimatedShippingCents
-                ? `Estimate is ${formatMoney(estimatedShippingCents)} based on destination and piece count. Enter the label cost, then submit — we'll charge their card, mark the box shipped, and send a confirmation.`
-                : "Enter the label cost, then submit. We'll charge their card, mark the box shipped, and send a confirmation."}
+                ? `Estimate is ${formatCad(estimatedShippingCents)} based on destination and piece count. Enter the label cost in CAD, then submit — we'll charge their card, mark the box shipped, and send a confirmation.`
+                : "Enter the label cost in CAD, then submit. We'll charge their card, mark the box shipped, and send a confirmation."}
           </p>
 
           <div className="mt-4 flex flex-wrap items-end gap-3">
@@ -170,7 +170,7 @@ export function OrderActions({
             {shippingFree ? null : (
               <div className="w-28">
                 <label className="label" htmlFor="shipping-cost">
-                  Shipping ($)
+                  Shipping (CAD $)
                 </label>
                 <input
                   id="shipping-cost"
@@ -334,19 +334,19 @@ export function OrderActions({
           <h2 className="font-semibold">Charge a fee</h2>
           <p className="mt-1 text-sm text-stone">
             Billed to the member&apos;s saved card through Stripe. Policy:
-            late fee up to {`$${RULES.lateFeeCents / 100}`}/item once after{" "}
+            late fee up to {formatCad(RULES.lateFeeCents)}/item once after{" "}
             {RULES.lateFeeAfterDays} days past due; replacement{" "}
-            {`$${RULES.replacementFeeCents / 100}`}/item.
-            {feeCents ? ` Fees so far: ${formatMoney(feeCents)}.` : ""}
+            {formatCad(RULES.replacementFeeCents)}/item.
+            {feeCents ? ` Fees so far: ${formatCad(feeCents)}.` : ""}
             {shippingCents
-              ? ` Shipping charged: ${formatMoney(shippingCents)}.`
+              ? ` Shipping charged: ${formatCad(shippingCents)}.`
               : ""}
           </p>
 
           <div className="mt-4 flex flex-wrap items-end gap-3">
             <div className="w-28">
               <label className="label" htmlFor="fee-amount">
-                Amount ($)
+                Amount (CAD $)
               </label>
               <input
                 id="fee-amount"

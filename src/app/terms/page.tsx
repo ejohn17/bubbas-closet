@@ -142,7 +142,7 @@ export default function TermsPage() {
           <p>
             Once a garment is more than {RULES.lateFeeAfterDays} days past due,
             we may charge a one-time late fee of up to{" "}
-            {`$${RULES.lateFeeCents / 100}`} per item to the card on file. That
+            {`$${RULES.lateFeeCents / 100} CAD`} per item to the card on file. That
             fee is charged once per garment, not per week. We&apos;ll email you
             before charging anything, and every fee appears on a Stripe receipt.
             If a garment doesn&apos;t come back, we may charge the replacement
@@ -159,7 +159,7 @@ export default function TermsPage() {
           <p>
             If a garment comes back damaged beyond what we can clean or repair,
             or doesn&apos;t come back at all, we may charge a replacement fee of{" "}
-            {`$${RULES.replacementFeeCents / 100}`} for that piece. We document
+            {`$${RULES.replacementFeeCents / 100} CAD`} for that piece. We document
             the condition of every garment before it ships, and we&apos;ll share
             that record with you if a charge is ever in question.
           </p>

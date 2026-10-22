@@ -3,7 +3,7 @@ import { isOverdue, listPicks } from "@/lib/db/picks";
 import { StatusPill } from "@/components/StatusPill";
 import { FilterTabs } from "@/components/admin/FilterTabs";
 import { AdminSearch } from "@/components/admin/AdminSearch";
-import { dueLabel, formatDate, formatMoney } from "@/lib/format";
+import { dueLabel, formatDate, formatCad } from "@/lib/format";
 import { outboundShippingSummary } from "@/lib/rules";
 import type { PickStatus } from "@/lib/types";
 
@@ -91,8 +91,8 @@ export default async function AdminOrders({
                 : shipping.kind === "included"
                   ? "shipping included"
                   : shipping.kind === "estimated"
-                    ? `est. shipping ${formatMoney(shipping.cents)}`
-                    : `shipping ${formatMoney(shipping.cents)}`;
+                    ? `est. shipping ${formatCad(shipping.cents)}`
+                    : `shipping ${formatCad(shipping.cents)}`;
 
             return (
               <li key={pick.id}>

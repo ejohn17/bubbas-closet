@@ -8,7 +8,7 @@ import { getTier } from "@/lib/tiers";
 import { ProductImage } from "@/components/ProductImage";
 import { StatusPill } from "@/components/StatusPill";
 import { OrderActions } from "@/components/admin/OrderActions";
-import { dueLabel, formatDate, formatDateTime, formatMoney } from "@/lib/format";
+import { dueLabel, formatDate, formatDateTime, formatCad } from "@/lib/format";
 import { outboundShippingSummary } from "@/lib/rules";
 import { ShippingCostLine } from "@/components/ShippingCostLine";
 
@@ -144,7 +144,7 @@ export default async function AdminOrderDetail({
               {shipping.kind === "charged" &&
               typeof pick.estimatedShippingCents === "number" ? (
                 <p className="mt-2 text-xs text-stone">
-                  Estimated at confirm: {formatMoney(pick.estimatedShippingCents)}
+                  Estimated at confirm: {formatCad(pick.estimatedShippingCents)}
                 </p>
               ) : null}
             </section>

@@ -1,4 +1,4 @@
-import { formatMoney } from "@/lib/format";
+import { formatCad } from "@/lib/format";
 import type { OutboundShippingKind } from "@/lib/rules";
 
 /**
@@ -21,8 +21,8 @@ export function ShippingCostLine({
     kind === "included"
       ? "Included"
       : kind === "estimated"
-        ? `Est. ${formatMoney(cents)}`
-        : formatMoney(cents);
+        ? `Est. ${formatCad(cents)}`
+        : formatCad(cents);
   const hint =
     kind === "included"
       ? audience === "member"

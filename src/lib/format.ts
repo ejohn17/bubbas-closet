@@ -24,6 +24,11 @@ export function formatMoney(cents?: number | null): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
+/** One-off charges (shipping, fees) are billed in CAD, e.g. 1400 → "$14.00 CAD". */
+export function formatCad(cents?: number | null): string {
+  return `${formatMoney(cents)} CAD`;
+}
+
 /** Display a dollar amount from config, e.g. 49.99 → "$49.99". */
 export function formatDollars(amount: number): string {
   return `$${amount.toFixed(2)}`;

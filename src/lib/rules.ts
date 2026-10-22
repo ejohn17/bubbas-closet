@@ -30,8 +30,12 @@ export const RULES = {
   /** Days before the due date that a return reminder goes out. */
   reminderDaysBefore: 3,
 
-  /** Currency for subscriptions and one-off fees. */
-  currency: "usd",
+  /**
+   * Currency for one-off charges: outbound shipping, late fees, and
+   * replacement fees. We operate from Canada, so these are CAD whatever the
+   * destination. Subscription prices carry their own currency in Stripe.
+   */
+  currency: "cad",
 
   /**
    * Countries we ship to at all. ISO 3166-1 alpha-2, as Stripe's
@@ -54,7 +58,7 @@ export const RULES = {
    * Estimated outbound postage by destination, using item count as a stand-in
    * for package weight — the same idea as Shopify shipping zones + weight
    * brackets. Shown on confirmed orders until the real label is billed (C.9).
-   * Amounts are USD cents and defaults pending typical-label confirmation.
+   * Amounts are CAD cents and defaults pending typical-label confirmation.
    */
   outboundShippingEstimateBrackets: {
     CA: [

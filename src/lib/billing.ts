@@ -329,7 +329,7 @@ export async function chargeFee(input: {
   const stripe = requireStripe();
 
   if (!Number.isFinite(input.amountCents) || input.amountCents < 50) {
-    throw new DomainError("invalid_amount", "Fee must be at least $0.50.");
+    throw new DomainError("invalid_amount", "Fee must be at least $0.50 CAD.");
   }
 
   const paymentMethodId = await defaultCardId(input.stripeCustomerId);

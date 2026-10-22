@@ -107,7 +107,7 @@ export async function sendPickConfirmation(pick: PickDoc): Promise<void> {
   const shipping = outboundShippingIsFree(pick.tierId)
     ? "Outbound shipping is included on your plan.\n\n"
     : estimate > 0
-      ? `Estimated outbound shipping is ${money(estimate)}. This is not the actual shipping cost — the real postage is calculated when your box ships and charged then.\n\n`
+      ? `Estimated outbound shipping is ${money(estimate)} CAD. This is not the actual shipping cost — the real postage is calculated when your box ships and charged then.\n\n`
       : "Outbound shipping will be billed at the label cost when the box ships.\n\n";
   await sendEmail({
     to: pick.email,
@@ -149,7 +149,7 @@ export async function sendOverdueNotice(pick: PickDoc): Promise<void> {
       `Your return was due ${formatDate(pick.dueAt)} and these pieces haven't reached us yet:\n\n` +
       `${outstanding.map((i) => `  • ${i.productTitle} (size ${i.size})`).join("\n")}\n\n` +
       `Sending them back within ${RULES.lateFeeAfterDays} days of the due date ` +
-      `avoids a one-time late fee of up to $${RULES.lateFeeCents / 100} per item. ` +
+      `avoids a one-time late fee of up to $${RULES.lateFeeCents / 100} CAD per item. ` +
       `If something's gone missing, just reply to this email and we'll sort it out.\n\n` +
       `— The ${BRAND.name} team`,
   });
@@ -164,7 +164,7 @@ export async function sendShippedNotice(pick: PickDoc): Promise<EmailResult> {
     : "";
   const shipping =
     pick.shippingCents && pick.shippingCents > 0
-      ? `Outbound shipping of ${money(pick.shippingCents)} ` +
+      ? `Outbound shipping of ${money(pick.shippingCents)} CAD ` +
         `was charged to the card on file. You'll get a separate Stripe receipt.\n\n`
       : "";
   return sendEmailResult({

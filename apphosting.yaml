@@ -65,10 +65,10 @@ env:
     value: "price_1UEeyDCrNQjymNqNoN5fOtEf"
     availability: [RUNTIME]
   - variable: STRIPE_PRICE_SIGNATURE
-    value: "price_1UEeyBCrNQjymNqNhRNxS85n"
+    value: "price_1UTRHOCrNQjymNqNuioBZV2N"
     availability: [RUNTIME]
   - variable: STRIPE_PRICE_PREMIER
-    value: "price_1UEeyACrNQjymNqNOIovkf3O"
+    value: "price_1UTRI4CrNQjymNqNdLZo1JBy"
     availability: [RUNTIME]
 
   # --- Transactional email (Resend) ---

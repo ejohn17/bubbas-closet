@@ -60,7 +60,7 @@ export async function PATCH(
           if (!Number.isFinite(shippingCents) || shippingCents < 50) {
             throw new DomainError(
               "invalid_amount",
-              "Enter the outbound shipping cost (at least $0.50).",
+              "Enter the outbound shipping cost (at least $0.50 CAD).",
             );
           }
 
