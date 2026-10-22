@@ -1,5 +1,9 @@
 # Bubbas Closet
 
+[![CI](https://github.com/ejohn17/bubbas-closet/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ejohn17/bubbas-closet/actions/workflows/ci.yml)
+
+![Bubbas Closet homepage](docs/screenshot-home.png)
+
 Tiered subscription clothing rental: members pick a monthly plan, choose pieces
 from a members-only closet up to their tier's item limit, wear them for the
 month, and swap for something new.
