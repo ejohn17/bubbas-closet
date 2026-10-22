@@ -42,6 +42,7 @@ export function ProfileForm({
     region: shippingAddress?.region ?? "",
     postalCode: shippingAddress?.postalCode ?? "",
     country: resolveShippingCountry(shippingAddress?.country, tierId),
+    phone: shippingAddress?.phone ?? "",
   }));
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -235,6 +236,20 @@ export function ProfileForm({
                 </option>
               ))}
             </select>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="label" htmlFor="addr-phone">
+              Phone number
+            </label>
+            <input
+              id="addr-phone"
+              type="tel"
+              className="input"
+              required
+              value={address.phone ?? ""}
+              onChange={(e) => setAddress({ ...address, phone: e.target.value })}
+              autoComplete="tel"
+            />
           </div>
         </div>
       </fieldset>

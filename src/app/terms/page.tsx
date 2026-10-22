@@ -121,9 +121,9 @@ export default function TermsPage() {
             outbound cost based on destination and how many pieces are in the
             box; you are charged the actual label cost when it ships. We email
             a prepaid return label when it&apos;s time to send your box back.
-            You&apos;re responsible for keeping your shipping address current
-            in your account; we aren&apos;t able to reroute a box once it&apos;s
-            on its way.
+            You&apos;re responsible for keeping your shipping address and phone
+            number current in your account; we aren&apos;t able to reroute a box
+            once it&apos;s on its way.
           </p>
 
           <h2>6. Returns</h2>

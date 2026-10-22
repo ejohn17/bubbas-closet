@@ -184,6 +184,25 @@ export function BoxSummary({
         ))}
       </div>
 
+      {!previewing && !hasAddress ? (
+        <div
+          role="status"
+          className="mt-6 rounded-3xl border border-amber-200 bg-amber-50 px-5 py-4 text-amber-950"
+        >
+          <p className="font-medium">We can&apos;t confirm this box yet.</p>
+          <p className="mt-1 text-sm">
+            {addressHint ?? "Add a shipping address"} in{" "}
+            <Link
+              href="/portal/account"
+              className="font-medium underline underline-offset-2"
+            >
+              your account
+            </Link>{" "}
+            before confirming. We need a phone number the carrier can reach.
+          </p>
+        </div>
+      ) : null}
+
       {previewing ? (
         <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -246,16 +265,6 @@ export function BoxSummary({
         <p className="mt-4 text-sm text-stone">
           Nothing is charged until you choose a plan. Once you&apos;re a member,
           this box is ready to confirm.
-        </p>
-      ) : null}
-
-      {!previewing && !hasAddress ? (
-        <p className="mt-4 text-sm text-stone">
-          {addressHint ?? "Add a shipping address"} in{" "}
-          <Link href="/portal/account" className="link text-ink">
-            your account
-          </Link>{" "}
-          before confirming.
         </p>
       ) : null}
 

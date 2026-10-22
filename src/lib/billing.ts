@@ -174,6 +174,7 @@ function shippingAddressFrom(session: Stripe.Checkout.Session): Address | null {
     country:
       normalizeShippingCountry(address.country) ??
       defaultShippingCountry(session.metadata?.tierId),
+    phone: session.customer_details?.phone ?? undefined,
   };
 }
 

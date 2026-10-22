@@ -132,6 +132,12 @@ export default async function AdminOrderDetail({
                 {address.city}, {address.region} {address.postalCode}
                 <br />
                 {address.country}
+                {address.phone ? (
+                  <>
+                    <br />
+                    {address.phone}
+                  </>
+                ) : null}
               </address>
             ) : (
               <p className="mt-3 text-sm text-stone">No address on file.</p>

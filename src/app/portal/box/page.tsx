@@ -21,15 +21,18 @@ export default async function BoxPage() {
       : null;
 
   const address = user.profile?.shippingAddress;
-  const canShip = Boolean(
+  const countryAllowed = Boolean(
     address?.line1 &&
       isCountryAllowedForTier(address.country, entitlement.subscription?.tierId),
   );
+  const canShip = countryAllowed && Boolean(address?.phone?.trim());
   const addressHint = canShip
     ? null
-    : address?.line1
-      ? "Your current address isn't available on this plan. Update it"
-      : null;
+    : countryAllowed
+      ? "Add a phone number to your shipping address"
+      : address?.line1
+        ? "Your current address isn't available on this plan. Update it"
+        : null;
 
   return (
     <div className="mx-auto max-w-2xl">

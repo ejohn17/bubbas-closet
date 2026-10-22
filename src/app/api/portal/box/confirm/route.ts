@@ -36,6 +36,12 @@ export async function POST() {
         `${unsupportedCountryMessage(sub.tierId)} Update your address in your account before confirming.`,
       );
     }
+    if (!address.phone?.trim()) {
+      throw new DomainError(
+        "missing_phone",
+        "Add a phone number to your shipping address in your account before confirming.",
+      );
+    }
 
     const pick = await confirmBox({
       uid: user.uid,

@@ -40,6 +40,13 @@ export async function PUT(request: Request) {
           "Name, street address, and city are required.",
         );
       }
+      const phone = addr.phone?.trim() ?? "";
+      if (phone.replace(/\D/g, "").length < 10) {
+        throw new DomainError(
+          "missing_phone",
+          "Please enter a phone number so the carrier can reach you.",
+        );
+      }
       const country = normalizeShippingCountry(addr.country);
       const tierId = (await getPrimarySubscription(user.uid))?.tierId ?? null;
       if (!country || !isCountryAllowedForTier(country, tierId)) {
@@ -56,6 +63,7 @@ export async function PUT(request: Request) {
         region: addr.region?.trim() ?? "",
         postalCode: addr.postalCode?.trim() ?? "",
         country,
+        phone,
       });
     }
 

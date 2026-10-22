@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   description: `How ${BRAND.name} collects, uses, and protects your information.`,
 };
 
-const LAST_UPDATED = "August 26, 2026";
+const LAST_UPDATED = "October 22, 2026";
 
 export default function PrivacyPage() {
   return (
@@ -44,7 +44,8 @@ export default function PrivacyPage() {
             </li>
             <li>
               <strong>Sizing and shipping details</strong> — the sizes you
-              enter, any notes you leave us, and the address we ship to.
+              enter, any notes you leave us, the address we ship to, and a phone
+              number so the carrier can reach you.
             </li>
             <li>
               <strong>Rental history</strong> — the garments you&apos;ve rented,
@@ -53,7 +54,8 @@ export default function PrivacyPage() {
             <li>
               <strong>Payment details</strong> — handled entirely by Stripe. We
               store a Stripe customer reference and your subscription status; we
-              never receive your full card number.
+              never receive your full card number. Stripe also collects your
+              billing address and phone number at checkout.
             </li>
             <li>
               <strong>Waitlist signups</strong> — an email address and the date
@@ -107,8 +109,8 @@ export default function PrivacyPage() {
               <strong>Mailchimp</strong> — marketing email, if you opted in.
             </li>
             <li>
-              <strong>Shipping carriers</strong> — your name and address, to
-              deliver and collect boxes.
+              <strong>Shipping carriers</strong> — your name, address, and phone
+              number, to deliver and collect boxes.
             </li>
           </ul>
           <p>
@@ -134,8 +136,8 @@ export default function PrivacyPage() {
           <h2>Your choices</h2>
           <ul>
             <li>
-              Update your email, sizes, or address any time from your account
-              page.
+              Update your email, sizes, address, or phone number any time from
+              your account page.
             </li>
             <li>
               Unsubscribe from marketing email using the link in any of those

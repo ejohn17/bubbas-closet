@@ -61,6 +61,7 @@ export async function POST(request: Request) {
       shipping_address_collection: {
         allowed_countries: [...shippingCountriesForTier(tierId)],
       },
+      phone_number_collection: { enabled: true },
       subscription_data: {
         metadata: { uid: user.uid, tierId },
       },

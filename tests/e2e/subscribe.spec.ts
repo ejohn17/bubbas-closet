@@ -18,6 +18,7 @@ const ADDRESS = {
   city: "Toronto",
   province: "ON",
   postalCode: "M5V 1A1",
+  phone: "416 555 0123",
 };
 
 let customerToCleanUp: string | null = null;
@@ -164,6 +165,7 @@ async function payWithTestCard(page: Page) {
   await page.locator("#shippingLocality").fill(ADDRESS.city);
   await page.locator("#shippingPostalCode").fill(ADDRESS.postalCode);
   await page.locator("#shippingAdministrativeArea").selectOption(ADDRESS.province);
+  await page.locator("#phoneNumber").fill(ADDRESS.phone);
 
   // With several payment methods, card sits in an accordion row covered by a
   // transparent "Pay with card" button that Playwright never considers

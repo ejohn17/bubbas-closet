@@ -14,6 +14,8 @@ export type Address = {
   region: string;
   postalCode: string;
   country: string;
+  /** Optional only so addresses saved before phone became required still load. */
+  phone?: string;
 };
 
 export type SizeProfile = {
