@@ -91,7 +91,7 @@ export default async function PortalHome({
 
       {cyclePick ? (
         <p className="card mt-8 px-5 py-4 text-sm text-stone">
-          You&apos;ve confirmed this month&apos;s box.{" "}
+          You&apos;ve confirmed this cycle&apos;s box.{" "}
           <Link href="/portal/orders" className="link text-ink">
             Track your rental
           </Link>{" "}

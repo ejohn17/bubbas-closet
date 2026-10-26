@@ -42,7 +42,7 @@ export default async function AdminOrders({
     <div>
       <h1 className="text-3xl font-semibold tracking-tight">Orders</h1>
       <p className="mt-2 text-stone">
-        Monthly boxes to pack, ship, and receive back. Search a return by
+        Boxes to pack, ship, and receive back. Search a return by
         member, tracking, or garment SKU.
       </p>
 

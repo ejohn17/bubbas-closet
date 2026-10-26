@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PreviewCarousel } from "@/components/PreviewCarousel";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SizeRangeNotice } from "@/components/SizeRangeNotice";
-import { BRAND, SIZE_RANGE, TIERS, STEPS } from "@/lib/config";
+import { BRAND, CYCLE_LABEL, SIZE_RANGE, TIERS, STEPS } from "@/lib/config";
 import { formatDollars } from "@/lib/format";
 import { outboundShippingShortNote, shippingNoteForTier } from "@/lib/rules";
 import { getSessionUser } from "@/lib/session";
@@ -65,7 +65,7 @@ export default async function Home() {
             Memberships
           </h2>
           <p className="mt-2 max-w-xl text-stone">
-            Build a box first, then pick the monthly plan that covers how
+            Build a box first, then pick the plan that covers how
             many pieces you chose. More items, more variety — in sizes{" "}
             {SIZE_RANGE.label}.
           </p>
@@ -91,12 +91,12 @@ export default async function Home() {
                 <h3 className="text-lg font-semibold">{tier.name}</h3>
                 <div className="mt-4 flex items-baseline gap-1">
                   <span className="text-4xl font-semibold tracking-tight">
-                    {formatDollars(tier.priceMonthly)}
+                    {formatDollars(tier.price)}
                   </span>
-                  <span className="text-stone">/ month</span>
+                  <span className="text-stone">/ {CYCLE_LABEL}</span>
                 </div>
                 <p className="mt-3 text-sm font-medium text-accent-dark">
-                  {tier.items} items per month
+                  {tier.items} items per box
                 </p>
                 <p className="mt-3 text-sm text-stone">{tier.blurb}</p>
                 <p className="mt-2 text-xs font-medium text-stone">
@@ -135,7 +135,7 @@ export default async function Home() {
                 Your closet is waiting
               </h2>
               <p className="mx-auto mt-2 max-w-md text-stone">
-                Pick this month&apos;s pieces, check what&apos;s out with you, or
+                Pick your next box, check what&apos;s out with you, or
                 manage your membership.
               </p>
               <Link href="/portal" className="btn-primary mt-8">

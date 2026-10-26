@@ -4,7 +4,7 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SizeRangeNotice } from "@/components/SizeRangeNotice";
 import { TierPicker, type TierOption } from "@/components/TierPicker";
-import { BRAND, recommendTierFor, STEPS, TIERS } from "@/lib/config";
+import { BRAND, CYCLE_LABEL, recommendTierFor, STEPS, TIERS } from "@/lib/config";
 import { formatDollars } from "@/lib/format";
 import { getSessionUser } from "@/lib/session";
 import { getEntitlement } from "@/lib/db/subscriptions";
@@ -48,7 +48,7 @@ export default async function SubscribePage({
         <p className="mt-3 max-w-xl text-stone">
           {boxCount > 0
             ? recommended
-              ? `Your box has ${boxCount} ${boxCount === 1 ? "piece" : "pieces"}. ${recommended.name} (${formatDollars(recommended.priceMonthly)}/mo, up to ${recommended.items}) covers it — you can pick a larger plan if you want more room next month.`
+              ? `Your box has ${boxCount} ${boxCount === 1 ? "piece" : "pieces"}. ${recommended.name} (${formatDollars(recommended.price)} / ${CYCLE_LABEL}, up to ${recommended.items}) covers it — you can pick a larger plan if you want more room in your next box.`
               : `Your box has ${boxCount} pieces, which is as many as our biggest plan covers.`
             : "Browse the closet and build a box first if you like — or pick a plan now and choose pieces after you subscribe. You can change plans later from your account."}
         </p>
@@ -81,7 +81,7 @@ export default async function SubscribePage({
         </div>
 
         <p className="mt-8 text-sm text-stone">
-          Memberships renew monthly and you can cancel any time from your
+          Memberships renew every {CYCLE_LABEL} and you can cancel any time from your
           account. Returns, late fees, and damage are covered in our{" "}
           <Link href="/terms" className="link text-ink">
             rental terms

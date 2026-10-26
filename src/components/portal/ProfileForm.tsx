@@ -125,7 +125,7 @@ export function ProfileForm({
       <fieldset>
         <legend className="text-lg font-semibold">Shipping address</legend>
         <p className="mt-1 text-sm text-stone">
-          Where your box goes each month. {shippingCostNote(tierId)}
+          Where your box goes each cycle. {shippingCostNote(tierId)}
           {tierName
             ? ` ${tierName} ships to ${formatShippingCountries(allowedCountries)}${allowedCountries.length === 1 ? " only" : ""}.`
             : ""}

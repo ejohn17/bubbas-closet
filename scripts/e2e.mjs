@@ -81,7 +81,7 @@ function stopOrphanedEmulators() {
 
 /** Finds the e2e membership prices by lookup key, creating any that are missing. */
 async function ensureTestPrices(stripe) {
-  const lookupKey = (tierId) => `bubbas_e2e_${tierId}`;
+  const lookupKey = (tierId) => `bubbas_e2e_${tierId}_35d`;
   const { data: existing } = await stripe.prices.list({
     lookup_keys: TIERS.map((t) => lookupKey(t.id)),
     active: true,
@@ -105,7 +105,7 @@ async function ensureTestPrices(stripe) {
         product: productId,
         currency: "cad",
         unit_amount: tier.cents,
-        recurring: { interval: "month" },
+        recurring: { interval: "day", interval_count: 35 },
         lookup_key: lookupKey(tier.id),
         nickname: `${tier.id} (e2e)`,
       });

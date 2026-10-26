@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
-import { BRAND, TIERS } from "@/lib/config";
+import { BRAND, CYCLE_LABEL, TIERS } from "@/lib/config";
 import {
   RULES,
   formatShippingCountries,
@@ -45,7 +45,7 @@ export default function TermsPage() {
           <h2>1. Your membership</h2>
           <p>
             You can browse the closet and hold pieces in a box before you
-            subscribe. Memberships are monthly and renew automatically until
+            subscribe. Memberships renew automatically every {CYCLE_LABEL} until
             you cancel. Each tier includes a set number of garments per
             billing cycle: {limits}. The plan you pick must cover the pieces
             already in your box. Prices are shown at signup and exclude any
@@ -53,7 +53,7 @@ export default function TermsPage() {
           </p>
           <p>
             Billing is handled by Stripe. Your card is charged on the day you
-            subscribe and on the same day each month after that. We never see or
+            subscribe and every {CYCLE_LABEL} after that. We never see or
             store your full card details.
           </p>
 
@@ -76,7 +76,7 @@ export default function TermsPage() {
             </li>
           </ul>
           <p>
-            We don&apos;t offer refunds for partial months or for items you
+            We don&apos;t offer refunds for partial cycles or for items you
             chose not to rent during a cycle.
           </p>
 

@@ -4,12 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { formatDollars } from "@/lib/format";
 import { outboundShippingShortNote, shippingNoteForTier } from "@/lib/rules";
-import { tierFitsBox } from "@/lib/config";
+import { CYCLE_LABEL, tierFitsBox } from "@/lib/config";
 
 export type TierOption = {
   id: string;
   name: string;
-  priceMonthly: number;
+  price: number;
   items: number;
   blurb: string;
   featured?: boolean;
@@ -141,12 +141,12 @@ export function TierPicker({
               <h3 className="text-lg font-semibold">{tier.name}</h3>
               <div className="mt-3 flex items-baseline gap-1">
                 <span className="text-3xl font-semibold tracking-tight">
-                  {formatDollars(tier.priceMonthly)}
+                  {formatDollars(tier.price)}
                 </span>
-                <span className="text-sm text-stone">/ month</span>
+                <span className="text-sm text-stone">/ {CYCLE_LABEL}</span>
               </div>
               <p className="mt-2 text-sm font-medium text-accent-dark">
-                {tier.items} items per month
+                {tier.items} items per box
               </p>
               <p className="mt-3 text-sm text-stone">{tier.blurb}</p>
               <p className="mt-2 text-xs font-medium text-stone">

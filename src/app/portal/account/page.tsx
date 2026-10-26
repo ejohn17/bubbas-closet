@@ -3,7 +3,7 @@ import { requireUser } from "@/lib/session";
 import { getPortalAccess } from "@/lib/portal";
 import { listHolds } from "@/lib/db/holds";
 import { getTier, priceIdForTier } from "@/lib/tiers";
-import { recommendTierFor, TIERS } from "@/lib/config";
+import { CYCLE_LABEL, recommendTierFor, TIERS } from "@/lib/config";
 import { formatDate, formatDollars } from "@/lib/format";
 import {
   formatShippingCountries,
@@ -44,7 +44,7 @@ export default async function AccountPage() {
             <p className="mt-2 text-sm text-stone">
               {holds.length > 0
                 ? recommended
-                  ? `Your box has ${holds.length} ${holds.length === 1 ? "piece" : "pieces"} — the ${recommended.name} plan (${formatDollars(recommended.priceMonthly)}/mo, up to ${recommended.items}) covers it.`
+                  ? `Your box has ${holds.length} ${holds.length === 1 ? "piece" : "pieces"} — the ${recommended.name} plan (${formatDollars(recommended.price)} / ${CYCLE_LABEL}, up to ${recommended.items}) covers it.`
                   : `Your box has ${holds.length} pieces, which is as many as our biggest plan covers.`
                 : "Browse the closet and build a box first. We'll suggest the plan that covers what you picked."}
             </p>
@@ -65,7 +65,7 @@ export default async function AccountPage() {
                   {tier?.name ?? "Membership"}
                 </h2>
                 <p className="mt-1 text-sm text-stone">
-                  {itemLimit} items per month
+                  {itemLimit} items per box
                   {subscription
                     ? ` · renews ${formatDate(subscription.currentPeriodEnd)}`
                     : ""}

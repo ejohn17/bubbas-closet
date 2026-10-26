@@ -12,6 +12,14 @@ import type { UnitCondition } from "@/lib/types";
  * See wiki/decisions.md § C.
  */
 export const RULES = {
+  /**
+   * Length of a membership cycle. Stripe prices recur every `cycleDays` days
+   * (interval "day"), so send-out and return dates line up the same way each
+   * cycle instead of drifting with month lengths. Stripe's period dates stay
+   * authoritative; this is the fallback and the number shown in copy (C.11).
+   */
+  cycleDays: 35,
+
   /** How long a garment stays reserved while a member builds their box (C.1). */
   holdTtlMinutes: 20,
 

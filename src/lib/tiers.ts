@@ -6,6 +6,11 @@ import { TIERS, type Tier } from "@/lib/config";
  * Price ids live in env vars so the same code runs against Stripe test and
  * live mode. Pricing and item limits are product decisions and live in
  * `config.ts`; other cycle rules live in `rules.ts`.
+ *
+ * `STRIPE_PRICE_<TIER>_LEGACY` holds the price a tier used before the move to
+ * 35-day cycles. Members still on it keep their tier and item limit until
+ * `scripts/migrate-cycle-prices.mjs` moves them over at their next renewal;
+ * new checkouts and tier changes only ever use the current price.
  */
 
 const PRICE_ENV: Record<string, string> = {
@@ -13,6 +18,12 @@ const PRICE_ENV: Record<string, string> = {
   signature: "STRIPE_PRICE_SIGNATURE",
   premier: "STRIPE_PRICE_PREMIER",
 };
+
+function legacyPriceIdForTier(tierId: string): string | null {
+  const envKey = PRICE_ENV[tierId];
+  if (!envKey) return null;
+  return process.env[`${envKey}_LEGACY`] || null;
+}
 
 export function getTier(tierId: string): Tier | null {
   return TIERS.find((t) => t.id === tierId) ?? null;
@@ -29,8 +40,14 @@ export function priceIdForTier(tierId: string): string | null {
 }
 
 export function tierForPriceId(priceId: string): Tier | null {
+  if (!priceId) return null;
   for (const tier of TIERS) {
-    if (priceIdForTier(tier.id) === priceId) return tier;
+    if (
+      priceIdForTier(tier.id) === priceId ||
+      legacyPriceIdForTier(tier.id) === priceId
+    ) {
+      return tier;
+    }
   }
   return null;
 }

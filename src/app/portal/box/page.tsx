@@ -46,7 +46,7 @@ export default async function BoxPage() {
       {cyclePick ? (
         <div className="card p-8 text-center">
           <p className="font-medium">
-            This month&apos;s box is already confirmed.
+            This cycle&apos;s box is already confirmed.
           </p>
           <p className="mt-2 text-sm text-stone">
             Your next pick unlocks at the start of your new billing cycle.

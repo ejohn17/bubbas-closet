@@ -1,14 +1,20 @@
 /**
  * Central brand + content config for the pre-launch landing page.
  * Edit copy, tiers, and steps here rather than in the components.
- * Tier pricing/limits mirror the confirmed plan: $49.99/10, $89.99/20, $149.99/40.
+ * Tier pricing/limits mirror the confirmed plan: $49.99/10, $89.99/20, $149.99/40,
+ * each charged once per cycle (RULES.cycleDays).
  */
+
+import { RULES } from "@/lib/rules";
+
+/** The membership cycle for copy, e.g. "35 days". Each cycle is one box. */
+export const CYCLE_LABEL = `${RULES.cycleDays} days`;
 
 export const BRAND = {
   name: "Bubbas Closet",
-  tagline: "Rent a rotating children's wardrobe, monthly",
+  tagline: `Rent a rotating children's wardrobe, a fresh box every ${CYCLE_LABEL}`,
   description:
-    "A subscription clothing rental for kids. Browse the closet, build a box of pieces that fit, then choose a monthly membership that covers what you picked.",
+    "A subscription clothing rental for kids. Browse the closet, build a box of pieces that fit, then choose a membership that covers what you picked.",
   // Placeholder — swap for the real launch email once available.
   contactEmail: "hello@mybubbascloset.ca",
 };
@@ -23,7 +29,7 @@ export const SIZE_RANGE = {
 export type Tier = {
   id: string;
   name: string;
-  priceMonthly: number;
+  price: number;
   items: number;
   blurb: string;
   featured?: boolean;
@@ -33,14 +39,14 @@ export const TIERS: Tier[] = [
   {
     id: "essential",
     name: "Essential",
-    priceMonthly: 49.99,
+    price: 49.99,
     items: 10,
     blurb: "A curated capsule to refresh their everyday looks.",
   },
   {
     id: "signature",
     name: "Signature",
-    priceMonthly: 89.99,
+    price: 89.99,
     items: 20,
     blurb: "Room to mix occasion outfits with the everyday staples.",
     featured: true,
@@ -48,7 +54,7 @@ export const TIERS: Tier[] = [
   {
     id: "premier",
     name: "Premier",
-    priceMonthly: 149.99,
+    price: 149.99,
     items: 40,
     blurb: "A full rotating kids' closet for families who love variety.",
   },
@@ -61,7 +67,7 @@ export const TIERS: Tier[] = [
 export const PREVIEW_ITEM_LIMIT = Math.max(...TIERS.map((t) => t.items));
 
 /**
- * The cheapest tier whose monthly allotment fits a box of `itemCount` pieces.
+ * The cheapest tier whose per-box allotment fits a box of `itemCount` pieces.
  * Null for an empty box (nothing to size against) or a box larger than any plan.
  */
 export function recommendTierFor(itemCount: number): Tier | null {
@@ -73,7 +79,7 @@ export function recommendTierFor(itemCount: number): Tier | null {
   );
 }
 
-/** Whether a plan's monthly allotment can cover a box of this size. */
+/** Whether a plan's per-box allotment can cover a box of this size. */
 export function tierFitsBox(tier: Tier, itemCount: number): boolean {
   return itemCount <= 0 || tier.items >= itemCount;
 }
@@ -93,11 +99,11 @@ export const STEPS: Step[] = [
     body: "We suggest the membership that covers everything in your box. Subscribe and your box is ready to confirm.",
   },
   {
-    title: "Wear it all month",
+    title: `Wear it for ${CYCLE_LABEL}`,
     body: "Your pieces ship to you. Premier includes outbound shipping; other plans are billed the label cost. Return labels are always on us.",
   },
   {
     title: "Send back & swap",
-    body: "Return everything with the prepaid label and choose a fresh set for the next month.",
+    body: "Return everything with the prepaid label and choose a fresh set for your next box.",
   },
 ];

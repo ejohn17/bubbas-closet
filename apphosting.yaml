@@ -62,12 +62,23 @@ env:
     availability: [RUNTIME]
 
   - variable: STRIPE_PRICE_ESSENTIAL
-    value: "price_1UEeyDCrNQjymNqNoN5fOtEf"
+    value: "price_1UUtNwCrNQjymNqN2y36MdK3"
     availability: [RUNTIME]
   - variable: STRIPE_PRICE_SIGNATURE
-    value: "price_1UTRHOCrNQjymNqNuioBZV2N"
+    value: "price_1UUtOMCrNQjymNqNg81gLtdV"
     availability: [RUNTIME]
   - variable: STRIPE_PRICE_PREMIER
+    value: "price_1UUtOlCrNQjymNqNmKkuIgz5"
+    availability: [RUNTIME]
+
+  # Old monthly prices. Remove once every member has renewed onto 35 days.
+  - variable: STRIPE_PRICE_ESSENTIAL_LEGACY
+    value: "price_1UEeyDCrNQjymNqNoN5fOtEf"
+    availability: [RUNTIME]
+  - variable: STRIPE_PRICE_SIGNATURE_LEGACY
+    value: "price_1UTRHOCrNQjymNqNuioBZV2N"
+    availability: [RUNTIME]
+  - variable: STRIPE_PRICE_PREMIER_LEGACY
     value: "price_1UTRI4CrNQjymNqNdLZo1JBy"
     availability: [RUNTIME]
 

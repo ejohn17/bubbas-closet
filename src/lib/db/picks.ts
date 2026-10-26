@@ -14,7 +14,7 @@ import { estimateOutboundShippingCents, isRentableCondition } from "@/lib/rules"
 import { listUnits } from "@/lib/db/units";
 
 /**
- * Picks are the monthly rental orders that replace the original Shopify $0
+ * Picks are the per-cycle rental orders that replace the original Shopify $0
  * orders. Creating one converts the member's live holds into an order and moves
  * every unit to `out`; there is no customer checkout because the subscription
  * already covers the rental.
@@ -178,7 +178,7 @@ export async function confirmBox(input: {
     if (holds.length > input.itemLimit) {
       throw new DomainError(
         "limit_reached",
-        `Your plan covers ${input.itemLimit} items per month.`,
+        `Your plan covers ${input.itemLimit} items per box.`,
       );
     }
 

@@ -101,6 +101,19 @@ describe("Stripe price mapping", () => {
     expect(priceIdForTier("platinum")).toBeNull();
   });
 
+  it("keeps members on a legacy monthly price on their tier", () => {
+    vi.stubEnv("STRIPE_PRICE_ESSENTIAL", "price_ess_35d");
+    vi.stubEnv("STRIPE_PRICE_ESSENTIAL_LEGACY", "price_ess_month");
+    vi.stubEnv("STRIPE_PRICE_SIGNATURE", "price_sig_35d");
+    vi.stubEnv("STRIPE_PRICE_SIGNATURE_LEGACY", "");
+
+    expect(tierForPriceId("price_ess_month")?.id).toBe("essential");
+    expect(tierForPriceId("price_ess_35d")?.id).toBe("essential");
+    // New checkouts and tier changes only ever use the current price.
+    expect(priceIdForTier("essential")).toBe("price_ess_35d");
+    expect(tierForPriceId("")).toBeNull();
+  });
+
   it("only offers tiers that have a price configured", () => {
     vi.stubEnv("STRIPE_PRICE_ESSENTIAL", "price_ess");
     vi.stubEnv("STRIPE_PRICE_SIGNATURE", "");

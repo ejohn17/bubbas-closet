@@ -9,7 +9,7 @@ import type { SubscriptionDoc } from "@/lib/types";
  * Who can do what in /portal.
  *
  * - `member`  — active or trialing membership. Full portal; box is capped at
- *               the plan's monthly allotment and can be confirmed.
+ *               the plan's per-box allotment and can be confirmed.
  * - `preview` — signed in, no active membership (never subscribed, or a
  *               membership that ended). Can browse, favorite, and build a box up
  *               to our largest plan; the box leads to plan selection instead of

@@ -196,7 +196,7 @@ export default async function AdminOrderDetail({
             {subscription ? (
               <p className="mt-2 flex items-center gap-2 text-stone">
                 <StatusPill status={subscription.status} />
-                {subscription.itemLimit} items / month
+                {subscription.itemLimit} items / box
               </p>
             ) : null}
             {member?.sizeProfile ? (

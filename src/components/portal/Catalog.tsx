@@ -8,7 +8,7 @@ import { CatalogCarousel } from "@/components/portal/CatalogCarousel";
 import { GuestAddPrompt } from "@/components/portal/GuestAddPrompt";
 import { CollapsibleFilters } from "@/components/CollapsibleFilters";
 import { FilterSelect, FiltersMenu } from "@/components/FilterSelect";
-import { recommendTierFor } from "@/lib/config";
+import { CYCLE_LABEL, recommendTierFor } from "@/lib/config";
 import { hasTag, matchesLabel, uniqueLabels } from "@/lib/filters";
 import { formatDollars } from "@/lib/format";
 import { bestCondition, conditionLabel } from "@/lib/rules";
@@ -377,7 +377,7 @@ function BoxStatusLine({
       <>
         {picked} {pieces} picked · fits the{" "}
         <span className="font-medium text-ink">{tier.name}</span> plan (
-        {formatDollars(tier.priceMonthly)}/mo, up to {tier.items})
+        {formatDollars(tier.price)} / {CYCLE_LABEL}, up to {tier.items})
       </>
     );
   }
@@ -385,7 +385,7 @@ function BoxStatusLine({
   return (
     <>
       {picked} of {itemLimit} items picked
-      {picked >= itemLimit ? " — your box is full for this month." : ""}
+      {picked >= itemLimit ? " — your box is full." : ""}
     </>
   );
 }

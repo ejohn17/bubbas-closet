@@ -152,7 +152,7 @@ async function reserveUnit(input: {
       throw new DomainError(
         "limit_reached",
         input.limitMessage ??
-          `Your plan covers ${input.itemLimit} items per month. Remove something to add this.`,
+          `Your plan covers ${input.itemLimit} items per box. Remove something to add this.`,
         409,
       );
     }

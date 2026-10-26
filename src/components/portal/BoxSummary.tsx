@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ProductImage } from "@/components/ProductImage";
 import { useHoldClock } from "@/components/portal/HoldBanner";
-import { recommendTierFor } from "@/lib/config";
+import { CYCLE_LABEL, recommendTierFor } from "@/lib/config";
 import { conditionLabel, estimateOutboundShippingCents, RULES } from "@/lib/rules";
 import { formatDollars, formatCad } from "@/lib/format";
 import type { UnitCondition } from "@/lib/types";
@@ -213,7 +213,7 @@ export function BoxSummary({
               <p className="mt-1 max-w-sm text-sm text-stone">
                 Fits our{" "}
                 <span className="font-medium text-ink">{recommended.name}</span>{" "}
-                plan — {formatDollars(recommended.priceMonthly)}/month for up to{" "}
+                plan — {formatDollars(recommended.price)} every {CYCLE_LABEL} for up to{" "}
                 {recommended.items} pieces. You can pick a bigger plan at
                 checkout.
               </p>

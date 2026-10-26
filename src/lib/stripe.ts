@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { DomainError } from "@/lib/db/base";
+import { RULES } from "@/lib/rules";
 
 /**
  * Stripe client + helpers.
@@ -44,8 +45,8 @@ export function siteUrl(): string {
 
 /**
  * Period boundaries moved from the subscription to its items in newer Stripe
- * API versions, so read whichever the account returns and fall back to a
- * month from now if neither is present.
+ * API versions, so read whichever the account returns and fall back to one
+ * cycle from the start if neither is present.
  */
 export function subscriptionPeriod(sub: Stripe.Subscription): {
   start: number;
@@ -64,7 +65,7 @@ export function subscriptionPeriod(sub: Stripe.Subscription): {
   const endSec =
     loose.current_period_end ??
     item?.current_period_end ??
-    startSec + 30 * 24 * 60 * 60;
+    startSec + RULES.cycleDays * 24 * 60 * 60;
 
   return { start: startSec * 1000, end: endSec * 1000 };
 }

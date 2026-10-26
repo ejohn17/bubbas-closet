@@ -53,9 +53,12 @@ config values. Stripe is needed only for signup and billing flows.
 3. **Security rules** — `firebase deploy --only firestore:rules`. All Firestore
    access goes through server code with the Admin SDK, so the rules deny every
    client read and write.
-4. **Stripe** — create three monthly recurring prices (\$49.99 / \$89.99 / \$149.99) and
-   set `STRIPE_PRICE_ESSENTIAL`, `STRIPE_PRICE_SIGNATURE`,
-   `STRIPE_PRICE_PREMIER`, plus `STRIPE_SECRET_KEY`.
+4. **Stripe** — create three recurring prices (\$49.99 / \$89.99 / \$149.99) that
+   bill **every 35 days** (interval `day`, count `35`, matching
+   `RULES.cycleDays`) and set `STRIPE_PRICE_ESSENTIAL`, `STRIPE_PRICE_SIGNATURE`,
+   `STRIPE_PRICE_PREMIER`, plus `STRIPE_SECRET_KEY`. While any member is still on
+   an old monthly price, also set `STRIPE_PRICE_<TIER>_LEGACY` to that price id
+   so they keep their tier — see *Moving members to 35-day cycles* below.
 5. **Stripe webhook** — point an endpoint at `/api/stripe/webhook` for
    `checkout.session.completed`, `customer.subscription.*`,
    `subscription_schedule.released`, `invoice.paid`, `invoice.payment_failed`,
@@ -170,8 +173,8 @@ npx playwright install chromium
 npm run test:e2e             # extra args go to Playwright, e.g. -- --headed
 ```
 
-Needs Java 21+ for the Firestore emulator. The first run creates three monthly
-CAD prices in your Stripe **test** account (lookup keys `bubbas_e2e_*`) and
+Needs Java 21+ for the Firestore emulator. The first run creates three 35-day
+CAD prices in your Stripe **test** account (lookup keys `bubbas_e2e_*_35d`) and
 reuses them afterwards. The run refuses to start without a `sk_test_` key, and
 every Stripe and Firebase variable the server reads is overridden, so the live
 values in `.env` are never used. Stripe can't reach a CI runner, so the test
@@ -204,3 +207,22 @@ Actions) and fails with a message saying so if it's missing.
 - `npm run typecheck` — TypeScript, no emit
 - `npm test` — unit tests (Vitest)
 - `npm run test:e2e` — end-to-end test (Playwright + Firebase emulators + Stripe test mode)
+- `node scripts/migrate-cycle-prices.mjs [--apply]` — move members to 35-day prices (below)
+
+### Moving members to 35-day cycles
+
+1. Create the 35-day prices in Stripe (same products, amounts, and currency).
+2. Set `STRIPE_PRICE_<TIER>` to the new ids and `STRIPE_PRICE_<TIER>_LEGACY` to
+   the old monthly ids, and deploy. New signups get 35-day billing; existing
+   members keep their tier and limit.
+3. Run `node scripts/migrate-cycle-prices.mjs` for a dry run, then again with
+   `--apply`. Each member gets a Stripe subscription schedule that keeps the
+   old price until their current period ends and starts the 35-day price from
+   that date, so their next charge is their normal renewal and nothing is
+   billed twice. Pending downgrades are carried over to the 35-day price.
+   Members set to cancel, with a coupon, or with more than one item are
+   skipped and listed for a manual look. Re-running is safe.
+4. After every member has renewed (about a month), remove the `_LEGACY` vars.
+
+A plain price swap is not an option: Stripe re-bills immediately whenever a
+subscription changes billing interval.

@@ -221,7 +221,18 @@ export async function changeTier(input: {
     );
   }
 
-  const sub = await stripe.subscriptions.retrieve(input.subscriptionId);
+  let sub = await stripe.subscriptions.retrieve(input.subscriptionId);
+
+  // A subscription can only have one schedule. Release any existing one — a
+  // pending downgrade or a pending move to the 35-day price — so this change
+  // replaces it. Both paths below put the member on a current price.
+  const existingScheduleId = stripeId(sub.schedule);
+  if (existingScheduleId) {
+    await stripe.subscriptionSchedules.release(existingScheduleId);
+    await setPendingTier(input.subscriptionId, null);
+    sub = await stripe.subscriptions.retrieve(input.subscriptionId);
+  }
+
   const itemId = sub.items.data[0]?.id;
   if (!itemId) {
     throw new DomainError("subscription_invalid", "Membership has no billable item.");
@@ -238,7 +249,9 @@ export async function changeTier(input: {
     return { applied: "immediate" };
   }
 
-  // Downgrade: keep the current price until the cycle ends, then switch.
+  // Downgrade: keep the current price until the cycle ends, then switch. The
+  // switch also moves a member on a legacy monthly price to a 35-day one at
+  // their renewal, with no extra charge.
   const schedule = await stripe.subscriptionSchedules.create({
     from_subscription: input.subscriptionId,
   });
