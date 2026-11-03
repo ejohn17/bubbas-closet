@@ -228,6 +228,13 @@ async function completeWithoutCheckoutPage(
     status: "complete",
     payment_status: "paid",
     subscription: subscription.id,
+    // Checkout collects the phone (phone_number_collection) into
+    // customer_details, which is where the webhook reads it from.
+    customer_details: {
+      ...session.customer_details,
+      name: ADDRESS.name,
+      phone: "+14165550123",
+    },
     collected_information: {
       shipping_details: {
         name: ADDRESS.name,
