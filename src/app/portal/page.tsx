@@ -6,6 +6,8 @@ import { availabilityByProduct } from "@/lib/db/units";
 import { listFavoriteProductIds } from "@/lib/db/favorites";
 import { listHolds } from "@/lib/db/holds";
 import { findPickForCycle } from "@/lib/db/picks";
+import { inReturnWindow } from "@/lib/db/subscriptions";
+import { formatDate } from "@/lib/format";
 import { Catalog } from "@/components/portal/Catalog";
 import { toCatalogItem, type CatalogItem } from "@/lib/catalog";
 import { RULES } from "@/lib/rules";
@@ -34,6 +36,9 @@ export default async function PortalHome({
     mode === "member" && entitlement.cycleKey
       ? await findPickForCycle(user.uid, entitlement.cycleKey)
       : null;
+  const subscription = entitlement.subscription;
+  const returnWindow =
+    mode === "member" && subscription && inReturnWindow(subscription);
 
   const favorites = new Set(favoriteIds);
   const boxProductIds = new Set(holds.map((h) => h.productId));
@@ -96,6 +101,12 @@ export default async function PortalHome({
             Track your rental
           </Link>{" "}
           — your next pick unlocks when your new cycle starts.
+        </p>
+      ) : returnWindow ? (
+        <p className="card mt-8 px-5 py-4 text-sm text-stone">
+          This cycle&apos;s rental period has ended. Your next box opens on{" "}
+          {formatDate(subscription.currentPeriodEnd)}, when your membership
+          renews.
         </p>
       ) : null}
 

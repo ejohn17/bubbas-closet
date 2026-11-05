@@ -1,13 +1,11 @@
 import { ok, toErrorResponse } from "@/lib/api";
 import { DomainError } from "@/lib/db/base";
 import { confirmBox } from "@/lib/db/picks";
+import { inReturnWindow, returnDueAtFor } from "@/lib/db/subscriptions";
 import { requireEntitledUser } from "@/lib/portal";
 import { sendPickConfirmation } from "@/lib/email";
-import {
-  isCountryAllowedForTier,
-  RULES,
-  unsupportedCountryMessage,
-} from "@/lib/rules";
+import { formatDate } from "@/lib/format";
+import { isCountryAllowedForTier, unsupportedCountryMessage } from "@/lib/rules";
 
 /**
  * Confirms the box for this billing cycle: holds become a pending pick order,
@@ -21,6 +19,12 @@ export async function POST() {
 
     if (!sub || !entitlement.cycleKey) {
       throw new DomainError("no_subscription", "No active membership found.", 403);
+    }
+    if (inReturnWindow(sub)) {
+      throw new DomainError(
+        "return_window",
+        `This cycle's rental period has ended. Your next box opens on ${formatDate(sub.currentPeriodEnd)}.`,
+      );
     }
 
     const address = user.profile?.shippingAddress;
@@ -50,7 +54,7 @@ export async function POST() {
       tierId: sub.tierId,
       itemLimit: entitlement.itemLimit,
       shippingAddress: address,
-      dueAt: sub.currentPeriodEnd + RULES.returnGraceDays * 24 * 60 * 60 * 1000,
+      dueAt: returnDueAtFor(sub),
     });
 
     await sendPickConfirmation(pick);

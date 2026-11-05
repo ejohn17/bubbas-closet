@@ -12,9 +12,15 @@ export const CYCLE_LABEL = `${RULES.cycleDays} days`;
 
 export const BRAND = {
   name: "Bubbas Closet",
-  tagline: `Rent a rotating children's wardrobe, a fresh box every ${CYCLE_LABEL}`,
+  tagline: "Dress them in something new every month",
   description:
-    "A subscription clothing rental for kids. Browse the closet, build a box of pieces that fit, then choose a membership that covers what you picked.",
+    "Rent quality toddler clothes & accessories, swap your wardrobe monthly, we handle the laundry.",
+  /** Second hero paragraph on the landing page. */
+  howItFits:
+    "Build a box full of your favourite items, then choose the membership that matches your picks (10, 20 or 40 items).",
+  /** Small print under the hero. */
+  heroFinePrint:
+    "Skip or cancel anytime, no commitment required. Prepaid return shipping + packaging included.",
   // Placeholder — swap for the real launch email once available.
   contactEmail: "hello@mybubbascloset.ca",
 };
@@ -31,6 +37,8 @@ export type Tier = {
   name: string;
   price: number;
   items: number;
+  /** One-line "who it's for" shown under the item count. */
+  tagline: string;
   blurb: string;
   featured?: boolean;
 };
@@ -38,17 +46,19 @@ export type Tier = {
 export const TIERS: Tier[] = [
   {
     id: "essential",
-    name: "Essential",
+    name: "Essentials",
     price: 49.99,
     items: 10,
-    blurb: "A curated capsule to refresh their everyday looks.",
+    tagline: "Perfect for 1 outfit a week + accessories.",
+    blurb: "A great way to try out our brand!",
   },
   {
     id: "signature",
     name: "Signature",
     price: 89.99,
     items: 20,
-    blurb: "Room to mix occasion outfits with the everyday staples.",
+    tagline: "A real working wardrobe.",
+    blurb: "Room to mix occasion outfits with everyday staples.",
     featured: true,
   },
   {
@@ -56,9 +66,15 @@ export const TIERS: Tier[] = [
     name: "Premier",
     price: 149.99,
     items: 40,
-    blurb: "A full rotating kids' closet for families who love variety.",
+    tagline: "A full wardrobe restock each month.",
+    blurb: "Room for everyday basics, accessories, seasonal, holiday & event picks.",
   },
 ];
+
+/** Effective price per item at a full box, e.g. 89.99 / 20 → 4.5. */
+export function pricePerItem(tier: Tier): number {
+  return Math.round((tier.price / tier.items) * 100) / 100;
+}
 
 /**
  * How many pieces a visitor can hold before choosing a plan: as many as our
@@ -91,19 +107,19 @@ export type Step = {
 
 export const STEPS: Step[] = [
   {
-    title: "Build your box",
-    body: "Browse the whole closet before you pay. Create a free account and add the children's pieces you love — each one is held for you while you decide.",
+    title: "Browse the closet",
+    body: "Add whatever you like to your box. Looking is free, and each piece is held for you while you decide.",
   },
   {
-    title: "Pick the plan that fits",
-    body: "We suggest the membership that covers everything in your box. Subscribe and your box is ready to confirm.",
+    title: "Pick your membership",
+    body: "Select the membership size you want to rent for the month: 10, 20 or 40 items.",
   },
   {
-    title: `Wear it for ${CYCLE_LABEL}`,
-    body: "Your pieces ship to you. Premier includes outbound shipping; other plans are billed the label cost. Return labels are always on us.",
+    title: "Wear, play, repeat",
+    body: "Stains and spills are part of toddlerhood. We expect them.",
   },
   {
-    title: "Send back & swap",
-    body: "Return everything with the prepaid label and choose a fresh set for your next box.",
+    title: "Send it back",
+    body: "Toss everything in the return packaging and attach the prepaid return label we sent you. We'll clean it all, and you pick your next batch.",
   },
 ];

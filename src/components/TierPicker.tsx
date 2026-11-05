@@ -4,15 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { formatDollars } from "@/lib/format";
 import { outboundShippingShortNote, shippingNoteForTier } from "@/lib/rules";
-import { CYCLE_LABEL, tierFitsBox } from "@/lib/config";
+import { CYCLE_LABEL, tierFitsBox, type Tier } from "@/lib/config";
 
-export type TierOption = {
-  id: string;
-  name: string;
-  price: number;
-  items: number;
-  blurb: string;
-  featured?: boolean;
+export type TierOption = Tier & {
   /** False when the tier has no Stripe price configured. */
   available: boolean;
 };
@@ -148,7 +142,8 @@ export function TierPicker({
               <p className="mt-2 text-sm font-medium text-accent-dark">
                 {tier.items} items per box
               </p>
-              <p className="mt-3 text-sm text-stone">{tier.blurb}</p>
+              <p className="mt-3 text-sm font-medium text-ink">{tier.tagline}</p>
+              <p className="mt-1 text-sm text-stone">{tier.blurb}</p>
               <p className="mt-2 text-xs font-medium text-stone">
                 {shippingNoteForTier(tier.id)}
                 {" · "}

@@ -5,6 +5,7 @@ import {
   type SubscriptionStatus,
 } from "@/lib/types";
 import { clean, COL, docTo, docsTo, nowMs } from "@/lib/db/base";
+import { RULES } from "@/lib/rules";
 
 /** Ranking used when a member has more than one subscription record. */
 function rank(sub: SubscriptionDoc): number {
@@ -63,6 +64,19 @@ export async function getEntitlement(uid: string): Promise<Entitlement> {
 /** Identifies the billing cycle a pick belongs to. One pick per cycle. */
 export function cycleKeyFor(sub: SubscriptionDoc): string {
   return `${sub.id}-${sub.currentPeriodStart}`;
+}
+
+/** When this cycle's box is due back: RULES.rentalDays after the cycle starts. */
+export function returnDueAtFor(sub: SubscriptionDoc): number {
+  return sub.currentPeriodStart + RULES.rentalDays * 24 * 60 * 60 * 1000;
+}
+
+/**
+ * Between the return due date and renewal, members send their box back and
+ * can't confirm a new one; their next box opens when the cycle renews (C.4).
+ */
+export function inReturnWindow(sub: SubscriptionDoc, at = nowMs()): boolean {
+  return at >= returnDueAtFor(sub);
 }
 
 export async function upsertSubscription(

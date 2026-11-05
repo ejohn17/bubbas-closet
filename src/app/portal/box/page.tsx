@@ -3,7 +3,9 @@ import { requireUser } from "@/lib/session";
 import { getPortalAccess } from "@/lib/portal";
 import { listHolds } from "@/lib/db/holds";
 import { findPickForCycle } from "@/lib/db/picks";
+import { inReturnWindow } from "@/lib/db/subscriptions";
 import { BoxSummary } from "@/components/portal/BoxSummary";
+import { formatDate } from "@/lib/format";
 import { isCountryAllowedForTier, RULES } from "@/lib/rules";
 
 export const metadata = { title: "My box" };
@@ -19,6 +21,9 @@ export default async function BoxPage() {
     mode === "member" && entitlement.cycleKey
       ? await findPickForCycle(user.uid, entitlement.cycleKey)
       : null;
+  const subscription = entitlement.subscription;
+  const returnWindow =
+    mode === "member" && subscription && inReturnWindow(subscription);
 
   const address = user.profile?.shippingAddress;
   const countryAllowed = Boolean(
@@ -53,6 +58,20 @@ export default async function BoxPage() {
           </p>
           <Link href="/portal/orders" className="btn-primary mt-6">
             View my rental
+          </Link>
+        </div>
+      ) : returnWindow ? (
+        <div className="card p-8 text-center">
+          <p className="font-medium">
+            This cycle&apos;s rental period has ended.
+          </p>
+          <p className="mt-2 text-sm text-stone">
+            Your next box opens on {formatDate(subscription.currentPeriodEnd)},
+            when your membership renews. You can browse and favorite pieces
+            until then.
+          </p>
+          <Link href="/portal" className="btn-primary mt-6">
+            Browse the closet
           </Link>
         </div>
       ) : (

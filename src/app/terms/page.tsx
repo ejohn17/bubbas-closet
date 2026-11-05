@@ -128,9 +128,12 @@ export default function TermsPage() {
 
           <h2>6. Returns</h2>
           <p>
-            Garments are due back by the end of your billing cycle. We allow a{" "}
-            {RULES.returnGraceDays}-day grace period after that date, and the
-            due date is shown on your order.
+            Each box is yours for {RULES.rentalDays} days from your billing
+            date, and garments are due back on day {RULES.rentalDays}. The
+            remaining {RULES.cycleDays - RULES.rentalDays} days before your
+            membership renews are for getting your box back to us, so a new
+            box can&apos;t be confirmed during that time. The due date is shown
+            on your order.
           </p>
           <p>
             Returning late doesn&apos;t block your next pick — you can choose

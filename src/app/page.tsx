@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { HygieneNotice } from "@/components/HygieneNotice";
+import { MessForgivenessNotice } from "@/components/MessForgivenessNotice";
 import { PreviewCarousel } from "@/components/PreviewCarousel";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SizeRangeNotice } from "@/components/SizeRangeNotice";
-import { BRAND, CYCLE_LABEL, SIZE_RANGE, TIERS, STEPS } from "@/lib/config";
+import { BRAND, CYCLE_LABEL, SIZE_RANGE, TIERS, STEPS, pricePerItem } from "@/lib/config";
 import { formatDollars } from "@/lib/format";
 import { outboundShippingShortNote, shippingNoteForTier } from "@/lib/rules";
 import { getSessionUser } from "@/lib/session";
@@ -19,6 +21,8 @@ export default async function Home() {
           {BRAND.tagline}.
         </h1>
         <p className="mt-5 max-w-xl text-lg text-stone">{BRAND.description}</p>
+        <p className="mt-3 max-w-xl text-stone">{BRAND.howItFits}</p>
+        <p className="mt-3 max-w-xl text-sm text-stone">*{BRAND.heroFinePrint}</p>
         <SizeRangeNotice className="mt-6 max-w-xl" />
 
         <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -41,6 +45,8 @@ export default async function Home() {
           )}
         </div>
       </section>
+
+      <MessForgivenessNotice />
 
       <section className="mx-auto w-full max-w-6xl px-6 pb-16">
         <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
@@ -96,9 +102,11 @@ export default async function Home() {
                   <span className="text-stone">/ {CYCLE_LABEL}</span>
                 </div>
                 <p className="mt-3 text-sm font-medium text-accent-dark">
-                  {tier.items} items per box
+                  Up to {tier.items} items of your choice (
+                  {formatDollars(pricePerItem(tier))}/item)
                 </p>
-                <p className="mt-3 text-sm text-stone">{tier.blurb}</p>
+                <p className="mt-3 text-sm font-medium text-ink">{tier.tagline}</p>
+                <p className="mt-1 text-sm text-stone">{tier.blurb}</p>
                 <p className="mt-2 text-xs font-medium text-stone">
                   {shippingNoteForTier(tier.id)}
                   {" · "}
@@ -127,6 +135,8 @@ export default async function Home() {
         </ol>
       </section>
 
+      <HygieneNotice />
+
       <section className="border-t border-line bg-card/60">
         <div className="mx-auto w-full max-w-2xl px-6 py-16 text-center">
           {user ? (
@@ -145,7 +155,7 @@ export default async function Home() {
           ) : (
             <>
               <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                Ready for a rotating kids&apos; closet?
+                Ready for something new every month?
               </h2>
               <p className="mx-auto mt-2 max-w-md text-stone">
                 Browse the closet, hold the pieces you love, and subscribe

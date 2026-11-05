@@ -20,11 +20,16 @@ export const RULES = {
    */
   cycleDays: 35,
 
+  /**
+   * Days a box is rented for, counted from the start of the billing cycle.
+   * Garments are due back on this day with no extra grace; the remaining
+   * `cycleDays - rentalDays` days before renewal are the return window, when
+   * no new box can be confirmed (C.4).
+   */
+  rentalDays: 30,
+
   /** How long a garment stays reserved while a member builds their box (C.1). */
   holdTtlMinutes: 20,
-
-  /** Days after the cycle ends before a return counts as overdue (C.4). */
-  returnGraceDays: 3,
 
   /** Days past the due date before a late fee may be charged (C.10). */
   lateFeeAfterDays: 7,

@@ -1,8 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeDb } from "./support/fake-firestore";
-import { NOW, seedSubscription } from "./support/fixtures";
+import { DAY, NOW, seedSubscription } from "./support/fixtures";
 import { getPortalAccess, portalModeFor } from "@/lib/portal";
-import { cycleKeyFor, getEntitlement } from "@/lib/db/subscriptions";
+import {
+  cycleKeyFor,
+  getEntitlement,
+  inReturnWindow,
+  returnDueAtFor,
+} from "@/lib/db/subscriptions";
 import type { SessionUser } from "@/lib/session";
 import type { SubscriptionStatus } from "@/lib/types";
 
@@ -104,6 +109,27 @@ describe("billing cycle key", () => {
     expect(cycleKeyFor(sub)).toBe("sub_1-1000");
     expect((await getEntitlement(user.uid)).cycleKey).toBe("sub_1-1000");
     expect(cycleKeyFor({ ...sub, currentPeriodStart: 2000 })).not.toBe(cycleKeyFor(sub));
+  });
+});
+
+describe("rental period", () => {
+  const sub = () =>
+    seedSubscription({
+      id: "sub_1",
+      uid: user.uid,
+      currentPeriodStart: NOW,
+      currentPeriodEnd: NOW + 35 * DAY,
+    });
+
+  it("is due back 30 days into the 35-day cycle, with no grace on top", () => {
+    expect(returnDueAtFor(sub())).toBe(NOW + 30 * DAY);
+  });
+
+  it("closes confirming for the last 5 days before renewal", () => {
+    const s = sub();
+    expect(inReturnWindow(s, NOW + 29 * DAY)).toBe(false);
+    expect(inReturnWindow(s, NOW + 30 * DAY)).toBe(true);
+    expect(inReturnWindow(s, NOW + 34 * DAY)).toBe(true);
   });
 });
 
