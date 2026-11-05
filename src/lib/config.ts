@@ -46,7 +46,7 @@ export type Tier = {
 export const TIERS: Tier[] = [
   {
     id: "essential",
-    name: "Essentials",
+    name: "Essential",
     price: 49.99,
     items: 10,
     tagline: "Perfect for 1 outfit a week + accessories.",

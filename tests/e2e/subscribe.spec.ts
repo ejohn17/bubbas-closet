@@ -72,9 +72,9 @@ test("a visitor browses the closet, builds a box, and subscribes", async ({
       .getByRole("link", { name: "Choose a plan" })
       .click();
     await expect(page).toHaveURL(/\/subscribe$/);
-    await expect(page.getByText(/Your box has 1 piece\. Essential/)).toBeVisible();
+    await expect(page.getByText(/Your box has 1 piece\. Essential\b/)).toBeVisible();
     await expect(
-      page.getByRole("button", { name: /^Fits your box Essential/ }),
+      page.getByRole("button", { name: /^Fits your box Essential\b/ }),
     ).toHaveAttribute("aria-pressed", "true");
 
     const [checkout] = await Promise.all([
