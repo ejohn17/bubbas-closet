@@ -20,6 +20,7 @@ export const COL = {
   holds: "holds",
   picks: "picks",
   favorites: "favorites",
+  settings: "settings",
   waitlist: process.env.WAITLIST_COLLECTION || "waitlist",
 } as const;
 

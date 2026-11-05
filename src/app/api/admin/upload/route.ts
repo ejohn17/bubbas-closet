@@ -6,7 +6,8 @@ const MAX_BYTES = 8 * 1024 * 1024;
 const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 
 /**
- * Uploads a product image to Firebase Storage and returns a public URL.
+ * Uploads a product (or, with `folder=carousel`, a marketing carousel) image
+ * to Firebase Storage and returns a public URL.
  * Requires FIREBASE_STORAGE_BUCKET; without it the admin UI falls back to
  * pasting image URLs directly.
  */
@@ -36,7 +37,8 @@ export async function POST(request: Request) {
     }
 
     const extension = file.type.split("/")[1]?.replace("jpeg", "jpg") ?? "jpg";
-    const path = `products/${Date.now()}-${crypto.randomUUID()}.${extension}`;
+    const folder = form.get("folder") === "carousel" ? "carousel" : "products";
+    const path = `${folder}/${Date.now()}-${crypto.randomUUID()}.${extension}`;
     const target = bucket.file(path);
 
     await target.save(Buffer.from(await file.arrayBuffer()), {

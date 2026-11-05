@@ -195,3 +195,14 @@ export type WaitlistDoc = {
   source?: string;
   mailchimpSyncedAt?: number | null;
 };
+
+export type CarouselImage = {
+  src: string;
+  alt: string;
+};
+
+/** Single document at `settings/carousel`; absent means "use the defaults". */
+export type CarouselSettingsDoc = {
+  images: CarouselImage[];
+  updatedAt: number;
+};

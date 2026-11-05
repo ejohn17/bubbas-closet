@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/admin/orders", label: "Orders" },
   { href: "/admin/members", label: "Members" },
   { href: "/admin/waitlist", label: "Waitlist" },
+  { href: "/admin/carousel", label: "Carousel" },
 ];
 
 export function AdminNav() {

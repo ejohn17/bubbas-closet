@@ -1,8 +1,12 @@
+import type { CarouselImage } from "@/lib/types";
+
 /**
- * Marketing closet preview. Files live in `public/carousel/` as compressed
- * WebP copies of the source photos in the repo-root `carousel/` folder.
+ * Default marketing closet preview, used until an admin sets a custom list
+ * at /admin/carousel (and again after "Reset to defaults"). Files live in
+ * `public/carousel/` as compressed WebP copies of the source photos in the
+ * repo-root `carousel/` folder.
  */
-export const PREVIEW_IMAGES = [
+export const PREVIEW_IMAGES: readonly CarouselImage[] = [
   {
     src: "/carousel/carousel-1.webp",
     alt: "Cream knit baby hoodie with bear ears and wooden buttons",
@@ -51,4 +55,4 @@ export const PREVIEW_IMAGES = [
     src: "/carousel/carousel-12.webp",
     alt: "White eyelet baby bloomers with ruffle hems",
   },
-] as const;
+];

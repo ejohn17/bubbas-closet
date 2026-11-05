@@ -7,10 +7,14 @@ import { SizeRangeNotice } from "@/components/SizeRangeNotice";
 import { BRAND, CYCLE_LABEL, SIZE_RANGE, TIERS, STEPS, pricePerItem } from "@/lib/config";
 import { formatDollars } from "@/lib/format";
 import { outboundShippingShortNote, shippingNoteForTier } from "@/lib/rules";
+import { getCarouselImages } from "@/lib/db/carousel";
 import { getSessionUser } from "@/lib/session";
 
 export default async function Home() {
-  const user = await getSessionUser();
+  const [user, carousel] = await Promise.all([
+    getSessionUser(),
+    getCarouselImages(),
+  ]);
 
   return (
     <main className="flex flex-1 flex-col">
@@ -58,7 +62,7 @@ export default async function Home() {
           right now — no membership required to look.
         </p>
         <div className="mt-8">
-          <PreviewCarousel />
+          <PreviewCarousel images={carousel.images} />
         </div>
         <Link href="/closet" className="link mt-6 inline-block text-sm">
           See everything in the closet

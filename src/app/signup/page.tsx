@@ -4,6 +4,7 @@ import { AuthForm } from "@/components/AuthForm";
 import { PreviewCarousel } from "@/components/PreviewCarousel";
 import { SiteHeader } from "@/components/SiteHeader";
 import { BRAND } from "@/lib/config";
+import { getCarouselImages } from "@/lib/db/carousel";
 import { getSessionUser } from "@/lib/session";
 import { safeNext } from "@/lib/redirects";
 
@@ -21,6 +22,8 @@ export default async function SignupPage({
 
   const user = await getSessionUser();
   if (user) redirect(destination);
+
+  const { images } = await getCarouselImages();
 
   return (
     <>
@@ -41,7 +44,7 @@ export default async function SignupPage({
             <p className="mb-4 text-sm font-medium text-stone">
               A peek at the closet
             </p>
-            <PreviewCarousel variant="signup" />
+            <PreviewCarousel images={images} variant="signup" />
           </div>
         </div>
       </main>

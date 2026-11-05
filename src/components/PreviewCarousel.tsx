@@ -2,17 +2,20 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { PREVIEW_IMAGES } from "@/lib/preview-images";
+import type { CarouselImage } from "@/lib/types";
 
 const INTERVAL_MS = 4500;
 
 /**
  * Closet preview for marketing pages. Landing shows a peeking strip;
- * signup shows one photo at a time beside the form.
+ * signup shows one photo at a time beside the form. Images come from
+ * `getCarouselImages()` (admin-managed, falling back to the defaults).
  */
 export function PreviewCarousel({
+  images,
   variant = "landing",
 }: {
+  images: CarouselImage[];
   variant?: "landing" | "signup";
 }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -20,7 +23,7 @@ export function PreviewCarousel({
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [inView, setInView] = useState(true);
-  const count = PREVIEW_IMAGES.length;
+  const count = images.length;
   const signup = variant === "signup";
 
   const goTo = useCallback(
@@ -84,6 +87,8 @@ export function PreviewCarousel({
     setIndex(best);
   }
 
+  if (count === 0) return null;
+
   return (
     <div
       ref={rootRef}
@@ -118,7 +123,7 @@ export function PreviewCarousel({
             }
           }}
         >
-          {PREVIEW_IMAGES.map((image, i) => (
+          {images.map((image, i) => (
             <figure
               key={image.src}
               className={`relative shrink-0 snap-start overflow-hidden rounded-3xl bg-line/40 ${
@@ -137,6 +142,9 @@ export function PreviewCarousel({
                     : "(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 80vw"
                 }
                 className="object-cover"
+                // Admin uploads live on Firebase Storage; serve those as-is
+                // rather than pinning remote hosts in next.config.
+                unoptimized={!image.src.startsWith("/")}
                 priority={i === 0}
               />
             </figure>
@@ -162,7 +170,7 @@ export function PreviewCarousel({
       </div>
 
       <div className="mt-4 flex justify-center gap-1.5">
-        {PREVIEW_IMAGES.map((image, i) => (
+        {images.map((image, i) => (
           <button
             key={image.src}
             type="button"
