@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/session";
 import { getPortalAccess } from "@/lib/portal";
+import { resolveBoxCycle } from "@/lib/box-cycle";
+import { nowMs } from "@/lib/db/base";
 import { listHolds } from "@/lib/db/holds";
-import { findPickForCycle } from "@/lib/db/picks";
-import { inReturnWindow } from "@/lib/db/subscriptions";
+import { listPicks } from "@/lib/db/picks";
 import { BoxSummary } from "@/components/portal/BoxSummary";
-import { formatDate } from "@/lib/format";
 import { isCountryAllowedForTier, RULES } from "@/lib/rules";
 
 export const metadata = { title: "My box" };
@@ -17,13 +17,11 @@ export default async function BoxPage() {
   const holds = await listHolds(user.uid);
   const previewing = mode === "preview";
 
-  const cyclePick =
-    mode === "member" && entitlement.cycleKey
-      ? await findPickForCycle(user.uid, entitlement.cycleKey)
-      : null;
   const subscription = entitlement.subscription;
-  const returnWindow =
-    mode === "member" && subscription && inReturnWindow(subscription);
+  const cycle =
+    mode === "member" && subscription
+      ? resolveBoxCycle(subscription, await listPicks({ uid: user.uid }))
+      : null;
 
   const address = user.profile?.shippingAddress;
   const countryAllowed = Boolean(
@@ -48,49 +46,40 @@ export default async function BoxPage() {
           : `Everything here is reserved for ${RULES.holdTtlMinutes} minutes. Confirm when you're happy with your picks and we'll get it shipped.`}
       </p>
 
-      {cyclePick ? (
+      {cycle && !cycle.open ? (
         <div className="card p-8 text-center">
-          <p className="font-medium">
-            This cycle&apos;s box is already confirmed.
-          </p>
-          <p className="mt-2 text-sm text-stone">
-            Your next pick unlocks at the start of your new billing cycle.
-          </p>
+          <p className="font-medium">{cycle.notice.title}</p>
+          <p className="mt-2 text-sm text-stone">{cycle.notice.detail}</p>
           <Link href="/portal/orders" className="btn-primary mt-6">
-            View my rental
-          </Link>
-        </div>
-      ) : returnWindow ? (
-        <div className="card p-8 text-center">
-          <p className="font-medium">
-            This cycle&apos;s rental period has ended.
-          </p>
-          <p className="mt-2 text-sm text-stone">
-            Your next box opens on {formatDate(subscription.currentPeriodEnd)},
-            when your membership renews. You can browse and favorite pieces
-            until then.
-          </p>
-          <Link href="/portal" className="btn-primary mt-6">
-            Browse the closet
+            View my rentals
           </Link>
         </div>
       ) : (
-        <BoxSummary
-          holds={holds.map((h) => ({
-            id: h.id,
-            productTitle: h.productTitle,
-            size: h.size,
-            condition: h.condition,
-            image: h.image,
-            expiresAt: h.expiresAt,
-          }))}
-          itemLimit={itemLimit}
-          hasAddress={canShip}
-          addressHint={addressHint}
-          tierId={entitlement.subscription?.tierId}
-          country={address?.country}
-          mode={previewing ? "preview" : "member"}
-        />
+        <>
+          {cycle?.notice ? (
+            <p className="card mb-6 px-5 py-4 text-sm text-stone">
+              <span className="font-medium text-ink">{cycle.notice.title}</span>{" "}
+              {cycle.notice.detail}
+            </p>
+          ) : null}
+          <BoxSummary
+            holds={holds.map((h) => ({
+              id: h.id,
+              productTitle: h.productTitle,
+              size: h.size,
+              condition: h.condition,
+              image: h.image,
+              expiresAt: h.expiresAt,
+            }))}
+            itemLimit={itemLimit}
+            renderedAt={nowMs()}
+            hasAddress={canShip}
+            addressHint={addressHint}
+            tierId={cycle?.tierId ?? entitlement.subscription?.tierId}
+            country={address?.country}
+            mode={previewing ? "preview" : "member"}
+          />
+        </>
       )}
     </div>
   );

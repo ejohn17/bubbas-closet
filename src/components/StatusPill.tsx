@@ -6,6 +6,7 @@ const TONES: Record<string, string> = {
   pending: "bg-amber-100 text-amber-900",
   shipped: "bg-sky-100 text-sky-900",
   partially_returned: "bg-indigo-100 text-indigo-900",
+  sent_back: "bg-indigo-100 text-indigo-900",
   returned: "bg-emerald-100 text-emerald-900",
   cancelled: "bg-line text-stone",
   overdue: "bg-red-100 text-red-800",

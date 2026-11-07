@@ -9,7 +9,9 @@ import { RULES } from "@/lib/rules";
  *
  * Reminders go out RULES.reminderDaysBefore days before the return due date;
  * an overdue notice follows once the date passes. Each is sent once per order —
- * late fees stay a manual call from the order screen.
+ * late fees stay a manual call from the order screen. A box the member has
+ * already sent back skips the reminder, but the overdue notice still goes out
+ * if it hasn't arrived: it's the warning owed before any late fee.
  */
 export async function POST(request: Request) {
   try {
@@ -38,7 +40,11 @@ export async function POST(request: Request) {
         continue;
       }
 
-      if (!pick.reminderSentAt && pick.dueAt - at <= window) {
+      if (
+        !pick.reminderSentAt &&
+        !pick.returnShippedAt &&
+        pick.dueAt - at <= window
+      ) {
         await sendReturnReminder(pick);
         await markReminderSent(pick.id, "reminderSentAt");
         reminders += 1;

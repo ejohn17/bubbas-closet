@@ -13,7 +13,9 @@ import {
   cancelPick,
   confirmBox,
   isOverdue,
+  listPicks,
   markReturned,
+  markSentBack,
   outstandingItems,
 } from "@/lib/db/picks";
 import { DomainError } from "@/lib/db/base";
@@ -311,5 +313,72 @@ describe("isOverdue", () => {
 
   it("never flags an order without a due date", () => {
     expect(isOverdue({ id: "p", status: "shipped", dueAt: null } as PickDoc, due)).toBe(false);
+  });
+});
+
+describe("markSentBack", () => {
+  const TRACKING = "CA123456789";
+
+  it("records the tracking and leaves garments out until they're received", async () => {
+    seedUnit("u1", { status: "out", holderUid: UID, pickId: "p" });
+    seedPick({ id: "p", uid: UID, status: "shipped", items: [item("u1")] });
+
+    await markSentBack("p", UID, `  ${TRACKING}  `);
+
+    expect(pick("p")).toMatchObject({
+      status: "shipped",
+      returnTrackingNumber: TRACKING,
+      returnShippedAt: NOW,
+    });
+    expect(unit("u1").status).toBe("out");
+  });
+
+  it("keeps the original date when the number is corrected", async () => {
+    seedPick({ id: "p", uid: UID, status: "shipped" });
+    await markSentBack("p", UID, TRACKING);
+
+    vi.setSystemTime(NOW + DAY);
+    await markSentBack("p", UID, "CA987654321");
+
+    expect(pick("p")).toMatchObject({
+      returnTrackingNumber: "CA987654321",
+      returnShippedAt: NOW,
+    });
+  });
+
+  it("accepts the rest of a partially returned box", async () => {
+    seedPick({ id: "p", uid: UID, status: "partially_returned" });
+    await markSentBack("p", UID, TRACKING);
+    expect(pick("p").returnShippedAt).toBe(NOW);
+  });
+
+  it.each(["pending", "returned", "cancelled"] as const)(
+    "refuses a %s order",
+    async (status) => {
+      seedPick({ id: "p", uid: UID, status });
+      await expectDomainError(markSentBack("p", UID, TRACKING), "not_returnable");
+    },
+  );
+
+  it.each([undefined, "", "   ", "1234567"])(
+    "refuses a tracking number of %j",
+    async (tracking) => {
+      seedPick({ id: "p", uid: UID, status: "shipped" });
+      await expectDomainError(markSentBack("p", UID, tracking), "invalid_tracking");
+      expect(pick("p").returnShippedAt).toBeUndefined();
+    },
+  );
+
+  it("treats another member's order as not found", async () => {
+    seedPick({ id: "p", uid: "someone-else", status: "shipped" });
+    await expectDomainError(markSentBack("p", UID, TRACKING), "pick_not_found");
+  });
+
+  it("makes the order findable by its return tracking", async () => {
+    seedPick({ id: "p", uid: UID, status: "shipped" });
+    await markSentBack("p", UID, TRACKING);
+
+    const found = await listPicks({ search: TRACKING });
+    expect(found.map((p) => p.id)).toEqual(["p"]);
   });
 });

@@ -125,7 +125,7 @@ describe("rental period", () => {
     expect(returnDueAtFor(sub())).toBe(NOW + 30 * DAY);
   });
 
-  it("closes confirming for the last 5 days before renewal", () => {
+  it("covers the last 5 days before renewal", () => {
     const s = sub();
     expect(inReturnWindow(s, NOW + 29 * DAY)).toBe(false);
     expect(inReturnWindow(s, NOW + 30 * DAY)).toBe(true);

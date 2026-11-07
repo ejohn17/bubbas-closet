@@ -112,6 +112,9 @@ export default async function AdminOrders({
                       {pick.trackingNumber
                         ? ` · ${pick.trackingNumber}`
                         : ""}
+                      {pick.returnTrackingNumber
+                        ? ` · return ${pick.returnTrackingNumber}`
+                        : ""}
                       {outstanding > 0 && pick.status !== "pending"
                         ? ` · ${outstanding} outstanding`
                         : ""}

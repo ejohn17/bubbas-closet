@@ -180,6 +180,20 @@ export default async function AdminOrderDetail({
                 <dt>Return due</dt>
                 <dd>{formatDate(pick.dueAt)}</dd>
               </div>
+              {pick.returnShippedAt ? (
+                <>
+                  <div className="flex justify-between gap-3">
+                    <dt>Sent back</dt>
+                    <dd>{formatDate(pick.returnShippedAt)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt>Return tracking</dt>
+                    <dd className="truncate text-right">
+                      {pick.returnTrackingNumber}
+                    </dd>
+                  </div>
+                </>
+              ) : null}
               <div className="flex justify-between gap-3">
                 <dt>Returned</dt>
                 <dd>{formatDate(pick.returnedAt)}</dd>

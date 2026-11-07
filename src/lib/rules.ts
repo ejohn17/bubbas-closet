@@ -23,8 +23,9 @@ export const RULES = {
   /**
    * Days a box is rented for, counted from the start of the billing cycle.
    * Garments are due back on this day with no extra grace; the remaining
-   * `cycleDays - rentalDays` days before renewal are the return window, when
-   * no new box can be confirmed (C.4).
+   * `cycleDays - rentalDays` days before renewal are the return window. In
+   * that window a member who has sent their box back can confirm the next one
+   * early, and its rental days start at renewal (C.4).
    */
   rentalDays: 30,
 

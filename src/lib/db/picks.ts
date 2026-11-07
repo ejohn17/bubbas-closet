@@ -20,6 +20,9 @@ import { listUnits } from "@/lib/db/units";
  * already covers the rental.
  */
 
+/** Shortest carrier tracking number we accept; catches typos, not fakes. */
+const MIN_TRACKING_LENGTH = 8;
+
 export async function getPick(id: string): Promise<PickDoc | null> {
   const snap = await requireDb().collection(COL.picks).doc(id).get();
   return docTo<PickDoc>(snap);
@@ -64,6 +67,7 @@ function pickSearchText(pick: PickDoc): string {
     pick.email,
     pick.uid,
     pick.trackingNumber,
+    pick.returnTrackingNumber,
     pick.carrier,
     address?.name,
     address?.line1,
@@ -118,21 +122,6 @@ export function isOverdue(pick: PickDoc, at = nowMs()): boolean {
 
 export function outstandingItems(pick: PickDoc): PickItem[] {
   return pick.items.filter((item) => !item.returnedAt);
-}
-
-export async function findPickForCycle(
-  uid: string,
-  cycleKey: string,
-): Promise<PickDoc | null> {
-  const snap = await requireDb()
-    .collection(COL.picks)
-    .where("uid", "==", uid)
-    .get();
-  return (
-    docsTo<PickDoc>(snap.docs).find(
-      (p) => p.cycleKey === cycleKey && p.status !== "cancelled",
-    ) ?? null
-  );
 }
 
 /** Turns the member's live holds into a pending pick order. */
@@ -278,6 +267,48 @@ export async function markShipped(
       shippedAt: pick.shippedAt ?? nowMs(),
       updatedAt: nowMs(),
     }),
+    { merge: true },
+  );
+}
+
+/**
+ * The member reports their box is on its way back, which unlocks their next
+ * box once the rental period ends (C.4). Garments stay `out` until admin
+ * receives them with markReturned, so a box that never arrives still shows as
+ * overdue in admin. Resubmitting corrects the number and keeps the original date.
+ */
+export async function markSentBack(
+  id: string,
+  uid: string,
+  trackingNumber?: string,
+): Promise<void> {
+  const ref = requireDb().collection(COL.picks).doc(id);
+  const pick = docTo<PickDoc>(await ref.get());
+  if (!pick || pick.uid !== uid) {
+    throw new DomainError("pick_not_found", "Order not found.", 404);
+  }
+  if (pick.status !== "shipped" && pick.status !== "partially_returned") {
+    throw new DomainError(
+      "not_returnable",
+      "Return tracking can only be added to a box that's out with you.",
+    );
+  }
+
+  const tracking = trackingNumber?.trim() ?? "";
+  if (tracking.length < MIN_TRACKING_LENGTH) {
+    throw new DomainError(
+      "invalid_tracking",
+      "Enter the full tracking number from your return label.",
+    );
+  }
+
+  const at = nowMs();
+  await ref.set(
+    {
+      returnTrackingNumber: tracking,
+      returnShippedAt: pick.returnShippedAt ?? at,
+      updatedAt: at,
+    },
     { merge: true },
   );
 }

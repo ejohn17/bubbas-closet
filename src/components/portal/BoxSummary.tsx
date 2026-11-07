@@ -28,6 +28,7 @@ export type BoxHold = {
 export function BoxSummary({
   holds,
   itemLimit,
+  renderedAt,
   hasAddress,
   addressHint,
   tierId,
@@ -36,6 +37,7 @@ export function BoxSummary({
 }: {
   holds: BoxHold[];
   itemLimit: number;
+  renderedAt: number;
   hasAddress: boolean;
   addressHint?: string | null;
   tierId?: string | null;
@@ -59,7 +61,7 @@ export function BoxSummary({
   const soonest = items.length
     ? Math.min(...items.map((i) => i.expiresAt))
     : null;
-  const { expired, urgent, label } = useHoldClock(soonest);
+  const { expired, urgent, label } = useHoldClock(soonest, renderedAt);
 
   async function remove(holdId: string) {
     setError(null);

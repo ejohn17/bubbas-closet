@@ -134,8 +134,9 @@ export async function sendReturnReminder(pick: PickDoc): Promise<void> {
       `Still out with you:\n` +
       `${outstanding.map((i) => `  • ${i.productTitle} (size ${i.size})`).join("\n")}\n\n` +
       `Use the prepaid return label we emailed you, pop the pieces in the mailer, ` +
-      `and drop it off — then pick your next set.\n\n` +
-      `${siteUrl()}/portal\n\n— The ${BRAND.name} team`,
+      `and drop it off. Then add the tracking number from your label under My ` +
+      `rentals, and you can pick your next box from ${formatDate(pick.dueAt)}.\n\n` +
+      `${siteUrl()}/portal/orders\n\n— The ${BRAND.name} team`,
   });
 }
 

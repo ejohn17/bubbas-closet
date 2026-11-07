@@ -166,6 +166,10 @@ export type PickDoc = {
   trackingNumber?: string;
   /** When the member is expected to have returned everything. */
   dueAt?: number | null;
+  /** Tracking the member gave us for their return. */
+  returnTrackingNumber?: string;
+  /** When the member said the box was on its way back; unlocks their next box. */
+  returnShippedAt?: number | null;
   feeCents?: number;
   /** Outbound label cost billed at ship time; 0 when the tier includes shipping. */
   shippingCents?: number;

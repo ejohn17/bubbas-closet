@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { BRAND, recommendTierFor } from "@/lib/config";
 import { requireUser } from "@/lib/session";
 import { getPortalAccess } from "@/lib/portal";
+import { nowMs } from "@/lib/db/base";
 import { getBox } from "@/lib/db/holds";
 import { getTier } from "@/lib/tiers";
 import { PortalNav } from "@/components/portal/PortalNav";
@@ -77,6 +78,7 @@ export default async function PortalLayout({
           <HoldBanner
             expiresAt={box.expiresAt}
             itemCount={box.holds.length}
+            renderedAt={nowMs()}
             mode={access.mode}
           />
         ) : null}

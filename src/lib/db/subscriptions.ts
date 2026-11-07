@@ -72,8 +72,8 @@ export function returnDueAtFor(sub: SubscriptionDoc): number {
 }
 
 /**
- * Between the return due date and renewal, members send their box back and
- * can't confirm a new one; their next box opens when the cycle renews (C.4).
+ * Between the return due date and renewal, members send their box back. A box
+ * confirmed in this window belongs to the next cycle (C.4); see resolveBoxCycle.
  */
 export function inReturnWindow(sub: SubscriptionDoc, at = nowMs()): boolean {
   return at >= returnDueAtFor(sub);

@@ -48,6 +48,9 @@ export function returnLabelDraft(input: {
     `${list || "  • your outstanding pieces"}\n\n` +
     `We've attached a prepaid return label to this email. Print it, stick it ` +
     `on the package, and drop it off.\n\n` +
+    `Once it's on its way, add the tracking number from the label under My ` +
+    `rentals in your account. You can then pick your next box from ` +
+    `${formatDue(input.dueAt)}, without waiting for your renewal.\n\n` +
     `Thank you,\nThe ${BRAND.name} team`;
 
   const params = `su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;

@@ -1,6 +1,10 @@
+import Link from "next/link";
 import { requireUser } from "@/lib/session";
+import { resolveBoxCycle } from "@/lib/box-cycle";
 import { listPicks, isOverdue } from "@/lib/db/picks";
+import { getPortalAccess } from "@/lib/portal";
 import { ProductImage } from "@/components/ProductImage";
+import { ReturnTrackingForm } from "@/components/portal/ReturnTrackingForm";
 import { StatusPill } from "@/components/StatusPill";
 import { formatDate } from "@/lib/format";
 import { outboundShippingSummary } from "@/lib/rules";
@@ -15,7 +19,14 @@ export default async function OrdersPage({
 }) {
   const { confirmed } = await searchParams;
   const user = await requireUser("/portal/orders");
-  const picks = await listPicks({ uid: user.uid });
+  const [picks, { entitlement, mode }] = await Promise.all([
+    listPicks({ uid: user.uid }),
+    getPortalAccess(user),
+  ]);
+  const cycle =
+    mode === "member" && entitlement.subscription
+      ? resolveBoxCycle(entitlement.subscription, picks)
+      : null;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -37,10 +48,14 @@ export default async function OrdersPage({
         </p>
       ) : (
         <ul className="mt-8 flex flex-col gap-5">
-          {picks.map((pick) => {
+          {picks.map((pick, index) => {
             const outstanding = pick.items.filter((i) => !i.returnedAt).length;
             const late = isOverdue(pick);
             const shipping = outboundShippingSummary(pick);
+            const out =
+              pick.status === "shipped" ||
+              pick.status === "partially_returned";
+            const sentBack = out && Boolean(pick.returnShippedAt);
 
             return (
               <li key={pick.id} className="card p-5">
@@ -59,7 +74,11 @@ export default async function OrdersPage({
                           : "Return details coming soon"}
                     </p>
                   </div>
-                  <StatusPill status={late ? "overdue" : pick.status} />
+                  <StatusPill
+                    status={
+                      sentBack ? "sent_back" : late ? "overdue" : pick.status
+                    }
+                  />
                 </div>
 
                 <ul className="mt-4 flex flex-wrap gap-3">
@@ -90,11 +109,32 @@ export default async function OrdersPage({
                   </div>
                 ) : null}
 
-                {outstanding > 0 && pick.status !== "pending" ? (
+                {sentBack ? (
+                  <p className="mt-4 text-sm text-stone">
+                    Sent back {formatDate(pick.returnShippedAt)} · tracking{" "}
+                    {pick.returnTrackingNumber}.
+                    {index === 0 && cycle ? (
+                      cycle.open ? (
+                        <>
+                          {" "}
+                          <Link href="/portal" className="link text-ink">
+                            Pick your next box
+                          </Link>
+                        </>
+                      ) : (
+                        ` ${cycle.notice.title}`
+                      )
+                    ) : null}
+                  </p>
+                ) : outstanding > 0 && pick.status !== "pending" ? (
                   <p className="mt-4 text-sm text-stone">
                     {outstanding} {outstanding === 1 ? "piece" : "pieces"} still
                     with you.
                   </p>
+                ) : null}
+
+                {out && !sentBack ? (
+                  <ReturnTrackingForm pickId={pick.id} />
                 ) : null}
               </li>
             );

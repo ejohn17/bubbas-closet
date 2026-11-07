@@ -120,6 +120,6 @@ export const STEPS: Step[] = [
   },
   {
     title: "Send it back",
-    body: "Toss everything in the return packaging and attach the prepaid return label we sent you. We'll clean it all, and you pick your next batch.",
+    body: `Toss everything in the return packaging and attach the prepaid return label we sent you. Add your tracking number and you can pick your next batch once your ${RULES.rentalDays} days are up.`,
   },
 ];

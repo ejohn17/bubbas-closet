@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   description: `Membership, rental, return, and damage terms for ${BRAND.name}.`,
 };
 
-const LAST_UPDATED = "September 10, 2026";
+const LAST_UPDATED = "November 6, 2026";
 
 export default function TermsPage() {
   const limits = TIERS.map((t) => `${t.name} (${t.items} items)`).join(", ");
@@ -131,9 +131,17 @@ export default function TermsPage() {
             Each box is yours for {RULES.rentalDays} days from your billing
             date, and garments are due back on day {RULES.rentalDays}. The
             remaining {RULES.cycleDays - RULES.rentalDays} days before your
-            membership renews are for getting your box back to us, so a new
-            box can&apos;t be confirmed during that time. The due date is shown
-            on your order.
+            membership renews are for getting your box back to us. The due date
+            is shown on your order.
+          </p>
+          <p>
+            From day {RULES.rentalDays}, once you&apos;ve sent your box back and
+            added its return tracking number to your account, you can confirm
+            your next box without waiting for your membership to renew. That
+            box belongs to your next billing cycle, so its{" "}
+            {RULES.rentalDays} days start when your membership renews and is
+            charged, whenever you confirm it. If your membership is set to
+            cancel, there&apos;s no next box to confirm early.
           </p>
           <p>
             Returning late doesn&apos;t block your next pick — you can choose

@@ -5,9 +5,8 @@ import { listProducts } from "@/lib/db/products";
 import { availabilityByProduct } from "@/lib/db/units";
 import { listFavoriteProductIds } from "@/lib/db/favorites";
 import { listHolds } from "@/lib/db/holds";
-import { findPickForCycle } from "@/lib/db/picks";
-import { inReturnWindow } from "@/lib/db/subscriptions";
-import { formatDate } from "@/lib/format";
+import { listPicks } from "@/lib/db/picks";
+import { resolveBoxCycle } from "@/lib/box-cycle";
 import { Catalog } from "@/components/portal/Catalog";
 import { toCatalogItem, type CatalogItem } from "@/lib/catalog";
 import { RULES } from "@/lib/rules";
@@ -32,13 +31,11 @@ export default async function PortalHome({
   ]);
 
   // Only a live membership has a current cycle to have picked in.
-  const cyclePick =
-    mode === "member" && entitlement.cycleKey
-      ? await findPickForCycle(user.uid, entitlement.cycleKey)
-      : null;
   const subscription = entitlement.subscription;
-  const returnWindow =
-    mode === "member" && subscription && inReturnWindow(subscription);
+  const cycle =
+    mode === "member" && subscription
+      ? resolveBoxCycle(subscription, await listPicks({ uid: user.uid }))
+      : null;
 
   const favorites = new Set(favoriteIds);
   const boxProductIds = new Set(holds.map((h) => h.productId));
@@ -94,19 +91,18 @@ export default async function PortalHome({
         ) : null}
       </div>
 
-      {cyclePick ? (
+      {cycle?.notice ? (
         <p className="card mt-8 px-5 py-4 text-sm text-stone">
-          You&apos;ve confirmed this cycle&apos;s box.{" "}
-          <Link href="/portal/orders" className="link text-ink">
-            Track your rental
-          </Link>{" "}
-          — your next pick unlocks when your new cycle starts.
-        </p>
-      ) : returnWindow ? (
-        <p className="card mt-8 px-5 py-4 text-sm text-stone">
-          This cycle&apos;s rental period has ended. Your next box opens on{" "}
-          {formatDate(subscription.currentPeriodEnd)}, when your membership
-          renews.
+          <span className="font-medium text-ink">{cycle.notice.title}</span>{" "}
+          {cycle.notice.detail}
+          {cycle.open ? null : (
+            <>
+              {" "}
+              <Link href="/portal/orders" className="link text-ink">
+                View my rentals
+              </Link>
+            </>
+          )}
         </p>
       ) : null}
 

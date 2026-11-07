@@ -7,8 +7,13 @@ import { formatHoldCountdown } from "@/lib/format";
 
 const URGENT_MS = 2 * 60_000;
 
-export function useHoldClock(expiresAt: number | null) {
-  const [now, setNow] = useState(() => Date.now());
+/**
+ * Counts down to `expiresAt`. The first render uses `renderedAt`, the server's
+ * time, because reading the clock here would differ between the server's HTML
+ * and the browser's hydration pass. The first tick switches to the browser's.
+ */
+export function useHoldClock(expiresAt: number | null, renderedAt: number) {
+  const [now, setNow] = useState(renderedAt);
 
   useEffect(() => {
     if (expiresAt === null) return;
@@ -32,16 +37,18 @@ export function useHoldClock(expiresAt: number | null) {
 export function HoldBanner({
   expiresAt,
   itemCount,
+  renderedAt,
   mode = "member",
 }: {
   expiresAt: number;
   itemCount: number;
+  renderedAt: number;
   /** Previewing visitors are nudged to a plan rather than to confirm. */
   mode?: "member" | "preview";
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { expired, urgent, label } = useHoldClock(expiresAt);
+  const { expired, urgent, label } = useHoldClock(expiresAt, renderedAt);
   const refreshed = useRef(false);
   const onBox = pathname.startsWith("/portal/box");
   const pieces = itemCount === 1 ? "piece is" : "pieces are";
