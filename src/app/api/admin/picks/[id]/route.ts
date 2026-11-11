@@ -10,11 +10,11 @@ import {
 } from "@/lib/db/picks";
 import { getUser } from "@/lib/db/users";
 import { chargeFee } from "@/lib/billing";
-import { sendShippedNotice } from "@/lib/email";
+import { sendReturnLabel, sendShippedNotice } from "@/lib/email";
 import { outboundShippingIsFree } from "@/lib/rules";
 import type { UnitCondition } from "@/lib/types";
 
-type Action = "ship" | "return" | "cancel" | "notes" | "fee";
+type Action = "ship" | "return" | "cancel" | "notes" | "fee" | "returnLabel";
 
 type Body = {
   action: Action;
@@ -26,7 +26,12 @@ type Body = {
   amountCents?: number;
   shippingCents?: number;
   description?: string;
+  /** Return label file for `returnLabel`, base64-encoded. */
+  label?: { filename?: string; contentBase64?: string };
 };
+
+const LABEL_EXTENSIONS = [".pdf", ".png", ".jpg", ".jpeg"];
+const LABEL_MAX_BYTES = 5 * 1024 * 1024;
 
 /** Fulfilment actions on a rental order. */
 export async function PATCH(
@@ -103,6 +108,56 @@ export async function PATCH(
           condition: body.condition,
         });
         return ok({ pick });
+      }
+
+      case "returnLabel": {
+        const pick = await getPick(id);
+        if (!pick) {
+          throw new DomainError("pick_not_found", "Order not found.", 404);
+        }
+        if (pick.status === "pending" || pick.status === "cancelled") {
+          throw new DomainError(
+            "not_shipped",
+            "Return labels can only be sent for boxes that have shipped.",
+          );
+        }
+        if (!pick.items.some((item) => !item.returnedAt)) {
+          throw new DomainError(
+            "nothing_outstanding",
+            "Every piece in this box is already back.",
+          );
+        }
+
+        const filename = body.label?.filename?.trim() ?? "";
+        const content = body.label?.contentBase64 ?? "";
+        const lowerName = filename.toLowerCase();
+        if (
+          !content ||
+          !LABEL_EXTENSIONS.some((ext) => lowerName.endsWith(ext))
+        ) {
+          throw new DomainError(
+            "invalid_label",
+            "Attach the return label as a PDF, PNG, or JPG.",
+          );
+        }
+        if ((content.length * 3) / 4 > LABEL_MAX_BYTES) {
+          throw new DomainError(
+            "label_too_large",
+            "That label file is over 5 MB.",
+          );
+        }
+
+        const member = await getUser(pick.uid);
+        const email = await sendReturnLabel({
+          pick,
+          to: pick.email ?? member?.email ?? "",
+          name: pick.shippingAddress?.name ?? member?.name,
+          label: { filename, content },
+        });
+        if (!email.sent) {
+          throw new DomainError("email_failed", email.reason, 502);
+        }
+        return ok({ emailed: true });
       }
 
       case "cancel": {

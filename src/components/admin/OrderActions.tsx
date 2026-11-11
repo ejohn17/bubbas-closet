@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PickStatus, UnitCondition } from "@/lib/types";
 import { formatCad } from "@/lib/format";
@@ -10,7 +10,19 @@ import {
   outboundShippingIsFree,
   RULES,
 } from "@/lib/rules";
-import { returnLabelDraft } from "@/lib/return-label-email";
+
+/** Reads a file as base64 (without the data-URL prefix). */
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result);
+      resolve(result.slice(result.indexOf(",") + 1));
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
 
 export type OrderItem = {
   unitId: string;
@@ -22,8 +34,8 @@ export type OrderItem = {
 
 /**
  * Fulfilment controls for one order: ship it (charging outbound postage except
- * on Premier), receive garments back (all or some), draft a return-label email,
- * charge a late fee, and keep internal notes.
+ * on Premier), receive garments back (all or some), email the return label
+ * from the shop's address, charge a late fee, and keep internal notes.
  */
 export function OrderActions({
   pickId,
@@ -37,8 +49,6 @@ export function OrderActions({
   estimatedShippingCents,
   tierId,
   email,
-  memberName,
-  dueAt,
 }: {
   pickId: string;
   status: PickStatus;
@@ -51,8 +61,6 @@ export function OrderActions({
   estimatedShippingCents?: number;
   tierId: string;
   email?: string | null;
-  memberName?: string | null;
-  dueAt?: number | null;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
@@ -71,18 +79,14 @@ export function OrderActions({
   const [condition, setCondition] = useState<UnitCondition>("excellent");
   const [feeAmount, setFeeAmount] = useState("");
   const [feeReason, setFeeReason] = useState("Late return fee");
+  const [labelFile, setLabelFile] = useState<File | null>(null);
+  const labelInputRef = useRef<HTMLInputElement>(null);
 
   const outstanding = items.filter((item) => !item.returnedAt);
   const shippingFree = outboundShippingIsFree(tierId);
   const shippingCentsParsed = Math.round(Number(shippingValue) * 100);
   const canChargeShipping =
     shippingFree || (Number.isFinite(shippingCentsParsed) && shippingCentsParsed >= 50);
-  const draft = returnLabelDraft({
-    to: email ?? "",
-    name: memberName,
-    dueAt,
-    items: outstanding,
-  });
 
   async function act(action: string, payload: Record<string, unknown> = {}) {
     setError(null);
@@ -118,6 +122,27 @@ export function OrderActions({
       return false;
     } finally {
       setPending(null);
+    }
+  }
+
+  async function sendReturnLabel() {
+    if (!labelFile) return;
+    setPending("returnLabel");
+    let contentBase64: string;
+    try {
+      contentBase64 = await fileToBase64(labelFile);
+    } catch {
+      setPending(null);
+      setError("Couldn't read that file. Try choosing it again.");
+      return;
+    }
+    const done = await act("returnLabel", {
+      label: { filename: labelFile.name, contentBase64 },
+    });
+    if (done) {
+      setLabelFile(null);
+      if (labelInputRef.current) labelInputRef.current.value = "";
+      setNotice(`Return label emailed to ${email}.`);
     }
   }
 
@@ -221,23 +246,33 @@ export function OrderActions({
         <section className="card p-5">
           <h2 className="font-semibold">Send a return label</h2>
           <p className="mt-1 text-sm text-stone">
-            Opens a draft telling the member it&apos;s time to send pieces back.
-            Attach the prepaid label before you hit send.
+            Attach the prepaid label and we&apos;ll email it to the member from
+            the shop&apos;s address, with the pieces still out and the due date.
           </p>
 
-          {draft ? (
-            <div className="mt-4 flex flex-wrap gap-3">
-              <a className="btn-primary" href={draft.mailto}>
-                Draft in email app
-              </a>
-              <a
-                className="btn-outline"
-                href={draft.gmail}
-                target="_blank"
-                rel="noreferrer"
+          {email ? (
+            <div className="mt-4 flex flex-wrap items-end gap-3">
+              <div className="min-w-48 flex-1">
+                <label className="label" htmlFor="return-label-file">
+                  Label (PDF, PNG, or JPG)
+                </label>
+                <input
+                  id="return-label-file"
+                  ref={labelInputRef}
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+                  className="input"
+                  onChange={(e) => setLabelFile(e.target.files?.[0] ?? null)}
+                />
+              </div>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={pending !== null || !labelFile}
+                onClick={sendReturnLabel}
               >
-                Draft in Gmail
-              </a>
+                {pending === "returnLabel" ? "Sending…" : "Email return label"}
+              </button>
             </div>
           ) : (
             <p className="mt-3 text-sm text-red-700">

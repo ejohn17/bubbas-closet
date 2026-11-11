@@ -109,8 +109,6 @@ export default async function AdminOrderDetail({
             estimatedShippingCents={shipping.cents}
             tierId={pick.tierId}
             email={pick.email ?? member?.email}
-            memberName={address?.name ?? member?.name}
-            dueAt={pick.dueAt}
           />
         </div>
 

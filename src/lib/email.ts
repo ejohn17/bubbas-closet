@@ -12,10 +12,14 @@ import { outboundShippingIsFree, RULES } from "@/lib/rules";
  * its own payment receipts.
  */
 
+/** A file attached to an email; `content` is base64. */
+export type EmailAttachment = { filename: string; content: string };
+
 type SendInput = {
   to: string;
   subject: string;
   text: string;
+  attachments?: EmailAttachment[];
 };
 
 export type EmailResult = { sent: true } | { sent: false; reason: string };
@@ -24,7 +28,12 @@ export async function sendEmail({ to, subject, text }: SendInput): Promise<boole
   return (await sendEmailResult({ to, subject, text })).sent;
 }
 
-async function sendEmailResult({ to, subject, text }: SendInput): Promise<EmailResult> {
+async function sendEmailResult({
+  to,
+  subject,
+  text,
+  attachments,
+}: SendInput): Promise<EmailResult> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.WAITLIST_FROM_EMAIL;
   if (!apiKey || !from) {
@@ -44,7 +53,7 @@ async function sendEmailResult({ to, subject, text }: SendInput): Promise<EmailR
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({ from, to, subject, text }),
+      body: JSON.stringify({ from, to, subject, text, attachments }),
     });
     if (res.ok) return { sent: true };
 
@@ -56,19 +65,19 @@ async function sendEmailResult({ to, subject, text }: SendInput): Promise<EmailR
       lower.includes("not verified") ||
       lower.includes("domain")
     ) {
+      const domain = from.match(/@([^>\s]+)/)?.[1] ?? "the sending domain";
       return {
         sent: false,
-        reason:
-          "Resend rejected the from-address. Verify bubbascloset.com in Resend (SPF/DKIM), or use their onboarding address until then.",
+        reason: `Resend rejected the from-address. Verify ${domain} in Resend (SPF/DKIM), or use their onboarding address until then.`,
       };
     }
     return {
       sent: false,
-      reason: "The confirmation email did not send. Check the server log for the Resend response.",
+      reason: "The email did not send. Check the server log for the Resend response.",
     };
   } catch (err) {
     console.error("[email] send failed", err);
-    return { sent: false, reason: "The confirmation email did not send (network error)." };
+    return { sent: false, reason: "The email did not send (network error)." };
   }
 }
 
@@ -137,6 +146,38 @@ export async function sendReturnReminder(pick: PickDoc): Promise<void> {
       `and drop it off. Then add the tracking number from your label under My ` +
       `rentals, and you can pick your next box from ${formatDate(pick.dueAt)}.\n\n` +
       `${siteUrl()}/portal/orders\n\n— The ${BRAND.name} team`,
+  });
+}
+
+/**
+ * Prepaid return label, sent from the shop's address (WAITLIST_FROM_EMAIL) with
+ * the label the admin bought attached — never from the admin's own mailbox.
+ */
+export async function sendReturnLabel(input: {
+  pick: PickDoc;
+  to: string;
+  name?: string | null;
+  label: EmailAttachment;
+}): Promise<EmailResult> {
+  const { pick, label } = input;
+  const outstanding = pick.items.filter((i) => !i.returnedAt);
+  const name = input.name?.trim();
+  const due = formatDate(pick.dueAt);
+  return sendEmailResult({
+    to: input.to,
+    subject: `Time to send your ${BRAND.name} pieces back`,
+    text:
+      `${name ? `Hi ${name},` : "Hi,"}\n\n` +
+      `It's time to return your ${BRAND.name} box. Please send these pieces ` +
+      `back by ${due}:\n\n` +
+      `${outstanding.map((i) => `  • ${i.productTitle} (size ${i.size})`).join("\n")}\n\n` +
+      `We've attached a prepaid return label to this email. Print it, stick it ` +
+      `on the package, and drop it off.\n\n` +
+      `Once it's on its way, add the tracking number from the label under My ` +
+      `rentals in your account. You can then pick your next box from ${due}, ` +
+      `without waiting for your renewal.\n\n` +
+      `${siteUrl()}/portal/orders\n\n— The ${BRAND.name} team`,
+    attachments: [label],
   });
 }
 
