@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ProductImage } from "@/components/ProductImage";
+import { MIN_PURCHASE_PRICE_CENTS } from "@/lib/rules";
 
 export type ProductFormValues = {
   id?: string;
@@ -13,6 +14,8 @@ export type ProductFormValues = {
   tags: string;
   sizes: string;
   retailValue: string;
+  /** Dollars as typed; blank means the style isn't for sale. */
+  purchasePrice: string;
   images: string[];
   active: boolean;
 };
@@ -25,6 +28,7 @@ export const EMPTY_PRODUCT: ProductFormValues = {
   tags: "",
   sizes: "",
   retailValue: "",
+  purchasePrice: "",
   images: [],
   active: true,
 };
@@ -86,6 +90,23 @@ export function ProductForm({ initial }: { initial: ProductFormValues }) {
     event.preventDefault();
     setError(null);
     setSaved(false);
+
+    // Blank clears the price, so a typo must never be read as blank.
+    const purchasePrice = values.purchasePrice.trim();
+    const purchasePriceCents = purchasePrice
+      ? Math.round(Number(purchasePrice) * 100)
+      : null;
+    if (
+      purchasePriceCents !== null &&
+      (!Number.isFinite(purchasePriceCents) ||
+        purchasePriceCents < MIN_PURCHASE_PRICE_CENTS)
+    ) {
+      setError(
+        "Purchase price must be a number of at least 0.50, or blank if this style isn't for sale.",
+      );
+      return;
+    }
+
     setPending(true);
 
     const payload = {
@@ -99,6 +120,7 @@ export function ProductForm({ initial }: { initial: ProductFormValues }) {
       retailValueCents: values.retailValue
         ? Math.round(Number(values.retailValue) * 100)
         : undefined,
+      purchasePriceCents,
       active: values.active,
     };
 
@@ -228,7 +250,25 @@ export function ProductForm({ initial }: { initial: ProductFormValues }) {
           />
         </div>
 
-        <div className="flex items-end">
+        <div>
+          <label className="label" htmlFor="purchase-price">
+            Purchase price (CAD $)
+          </label>
+          <input
+            id="purchase-price"
+            className="input"
+            inputMode="decimal"
+            value={values.purchasePrice}
+            onChange={(e) => set("purchasePrice", e.target.value)}
+            placeholder="Not for sale"
+          />
+          <p className="mt-1.5 text-xs text-stone">
+            What a member pays to keep a piece from their box instead of
+            returning it. Leave blank if this style isn&apos;t for sale.
+          </p>
+        </div>
+
+        <div className="flex items-end sm:col-span-2">
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"

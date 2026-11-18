@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { isOverdue, listPicks } from "@/lib/db/picks";
+import {
+  isFullyPurchased,
+  isOverdue,
+  listPicks,
+  outstandingItems,
+  purchasedItems,
+} from "@/lib/db/picks";
 import { StatusPill } from "@/components/StatusPill";
 import { FilterTabs } from "@/components/admin/FilterTabs";
 import { AdminSearch } from "@/components/admin/AdminSearch";
@@ -18,9 +24,16 @@ const STATUSES: PickStatus[] = [
 export default async function AdminOrders({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; search?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    search?: string;
+    reset?: string;
+    skipped?: string;
+  }>;
 }) {
-  const { status, search } = await searchParams;
+  const { status, search, reset, skipped } = await searchParams;
+  const resetCount = Number(reset);
+  const skippedCount = Number(skipped) || 0;
   const filter = status ?? "";
   const query = search?.trim() ?? "";
   const all = await listPicks({ search: query || undefined });
@@ -45,6 +58,17 @@ export default async function AdminOrders({
         Boxes to pack, ship, and receive back. Search a return by
         member, tracking, or garment SKU.
       </p>
+
+      {reset !== undefined && Number.isFinite(resetCount) ? (
+        <p role="status" className="card mt-6 px-5 py-4 text-sm text-stone">
+          <span className="font-medium text-ink">Test order reset.</span>{" "}
+          {resetCount} {resetCount === 1 ? "garment is" : "garments are"} back
+          in the closet.
+          {skippedCount > 0
+            ? ` ${skippedCount} ${skippedCount === 1 ? "garment had" : "garments had"} already moved on to another order and ${skippedCount === 1 ? "was" : "were"} left as ${skippedCount === 1 ? "it was" : "they were"}.`
+            : ""}
+        </p>
+      ) : null}
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
         <FilterTabs
@@ -81,7 +105,8 @@ export default async function AdminOrders({
       ) : (
         <ul className="card mt-8 divide-y divide-line">
           {picks.map((pick) => {
-            const outstanding = pick.items.filter((i) => !i.returnedAt).length;
+            const outstanding = outstandingItems(pick).length;
+            const purchased = purchasedItems(pick).length;
             const late = isOverdue(pick);
             const who = pick.shippingAddress?.name ?? pick.email ?? "Member";
             const shipping = outboundShippingSummary(pick);
@@ -92,7 +117,9 @@ export default async function AdminOrders({
                   ? "shipping included"
                   : shipping.kind === "estimated"
                     ? `est. shipping ${formatCad(shipping.cents)}`
-                    : `shipping ${formatCad(shipping.cents)}`;
+                    : shipping.kind === "flat"
+                      ? `shipping ${formatCad(shipping.cents)} flat`
+                      : `shipping ${formatCad(shipping.cents)}`;
 
             return (
               <li key={pick.id}>
@@ -118,6 +145,7 @@ export default async function AdminOrders({
                       {outstanding > 0 && pick.status !== "pending"
                         ? ` · ${outstanding} outstanding`
                         : ""}
+                      {purchased > 0 ? ` · ${purchased} purchased` : ""}
                     </p>
                   </div>
 
@@ -126,7 +154,11 @@ export default async function AdminOrders({
                     pick.status === "partially_returned" ? (
                       <span>{dueLabel(pick.dueAt)}</span>
                     ) : null}
-                    <StatusPill status={late ? "overdue" : pick.status} />
+                    {isFullyPurchased(pick) ? (
+                      <StatusPill status="sold" label="Purchased" />
+                    ) : (
+                      <StatusPill status={late ? "overdue" : pick.status} />
+                    )}
                   </div>
                 </Link>
               </li>

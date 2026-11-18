@@ -17,9 +17,10 @@ import {
   markReturned,
   markSentBack,
   outstandingItems,
+  recordPurchase,
 } from "@/lib/db/picks";
 import { DomainError } from "@/lib/db/base";
-import type { Address, PickDoc, PickItem, UnitDoc } from "@/lib/types";
+import type { Address, HoldDoc, PickDoc, PickItem, UnitDoc } from "@/lib/types";
 
 vi.mock("@/lib/firebase-admin", async () => {
   const { firebaseAdminMock } = await import("./support/fake-firestore");
@@ -112,7 +113,8 @@ describe("confirmBox", () => {
     });
     expect(created.items.map((i) => i.unitId)).toEqual([a.unit.id, b.unit.id]);
     expect(created.items[0]).toMatchObject({ sku: a.unit.sku, condition: "excellent", returnedAt: null });
-    expect(created.estimatedShippingCents).toBe(1400);
+    // Canada ships at a flat rate whatever the box holds.
+    expect(created.estimatedShippingCents).toBe(2500);
 
     expect(pick(created.id).status).toBe("pending");
     expect(holds()).toHaveLength(0);
@@ -187,6 +189,22 @@ describe("confirmBox", () => {
     expect(holds()).toHaveLength(2);
   });
 
+  it("confirms a piece whose style has no photo or SKU", async () => {
+    const { unit: plain } = seedHeldUnit(UID, "a");
+    fakeDb.seed("units", plain.id, { ...unit(plain.id), sku: undefined });
+    const held = fakeDb.read<HoldDoc>("holds", "a");
+    if (!held) throw new Error("hold a missing");
+    const noImage: Partial<HoldDoc> = { ...held };
+    delete noImage.image;
+    fakeDb.seed("holds", "a", noImage);
+
+    const created = await confirm();
+
+    expect(created.items[0]).not.toHaveProperty("image");
+    expect(created.items[0]).not.toHaveProperty("sku");
+    expect(pick(created.id).items[0]).toMatchObject({ unitId: plain.id, returnedAt: null });
+  });
+
   it("records no shipping estimate for Premier", async () => {
     seedHeldUnit(UID, "a");
     const created = await confirm({ tierId: "premier", itemLimit: 40 });
@@ -259,6 +277,181 @@ describe("markReturned", () => {
 
   it("errors on an unknown order", async () => {
     await expectDomainError(markReturned("missing"), "pick_not_found");
+  });
+
+  it("leaves a purchased piece sold when everything else is received", async () => {
+    seedUnit("u1", { status: "sold", pickId: "p1" });
+    seedUnit("u2", { status: "out", holderUid: UID, pickId: "p1" });
+    seedPick({
+      id: "p1",
+      uid: UID,
+      status: "shipped",
+      items: [item("u1", { purchasedAt: NOW - DAY, purchasePriceCents: 2500 }), item("u2")],
+    });
+
+    await markReturned("p1");
+
+    expect(pick("p1").status).toBe("returned");
+    expect(pick("p1").items[0].returnedAt).toBeNull();
+    expect(unit("u1")).toMatchObject({ status: "sold", pickId: "p1" });
+    expect(unit("u2").status).toBe("cleaning");
+  });
+
+  it("won't receive a purchased piece even when it's named", async () => {
+    seedUnit("u1", { status: "sold", pickId: "p1" });
+    seedUnit("u2", { status: "out", holderUid: UID, pickId: "p1" });
+    seedPick({
+      id: "p1",
+      uid: UID,
+      status: "shipped",
+      items: [item("u1", { purchasedAt: NOW - DAY }), item("u2")],
+    });
+
+    await markReturned("p1", { unitIds: ["u1"] });
+
+    expect(pick("p1").status).toBe("shipped");
+    expect(unit("u1").status).toBe("sold");
+  });
+});
+
+describe("recordPurchase", () => {
+  const SESSION = "cs_test_1";
+
+  function shippedPick(overrides: Partial<PickDoc> = {}) {
+    seedUnit("u1", { status: "out", holderUid: UID, pickId: "p1" });
+    seedUnit("u2", { status: "out", holderUid: UID, pickId: "p1" });
+    return seedPick({
+      id: "p1",
+      uid: UID,
+      status: "shipped",
+      dueAt: NOW + 30 * DAY,
+      items: [item("u1"), item("u2")],
+      ...overrides,
+    });
+  }
+
+  function buy(unitIds: string[], sessionId = SESSION) {
+    return recordPurchase("p1", {
+      uid: UID,
+      sessionId,
+      lines: unitIds.map((unitId) => ({ unitId, priceCents: 2500 })),
+    });
+  }
+
+  it("marks the piece purchased and sells its unit out of inventory", async () => {
+    shippedPick();
+
+    const result = await buy(["u1"]);
+
+    expect(result.rejected).toEqual([]);
+    expect(result.purchased.map((i) => i.unitId)).toEqual(["u1"]);
+    expect(pick("p1").items[0]).toMatchObject({
+      purchasedAt: NOW,
+      purchasePriceCents: 2500,
+      purchaseSessionId: SESSION,
+      returnedAt: null,
+    });
+    expect(unit("u1")).toMatchObject({
+      status: "sold",
+      holderUid: null,
+      pickId: "p1",
+    });
+  });
+
+  it("keeps the order open while other pieces are still out", async () => {
+    shippedPick();
+
+    await buy(["u1"]);
+
+    expect(pick("p1").status).toBe("shipped");
+    expect(outstandingItems(pick("p1")).map((i) => i.unitId)).toEqual(["u2"]);
+    expect(unit("u2")).toMatchObject({ status: "out", holderUid: UID });
+    expect(isOverdue(pick("p1"), NOW + 31 * DAY)).toBe(true);
+  });
+
+  it("closes the order when the member buys everything", async () => {
+    shippedPick();
+
+    await buy(["u1", "u2"]);
+
+    expect(pick("p1")).toMatchObject({ status: "returned", returnedAt: NOW });
+    expect(isOverdue(pick("p1"), NOW + 31 * DAY)).toBe(false);
+  });
+
+  it("closes the order when the last piece out is bought", async () => {
+    shippedPick();
+    await markReturned("p1", { unitIds: ["u1"] });
+
+    await buy(["u2"]);
+
+    expect(pick("p1").status).toBe("returned");
+    expect(unit("u1").status).toBe("cleaning");
+    expect(unit("u2").status).toBe("sold");
+  });
+
+  it("never offers a sold unit to another member", async () => {
+    shippedPick();
+    await buy(["u1"]);
+
+    const available = fakeDb
+      .all<UnitDoc>("units")
+      .filter((u) => u.status === "available");
+    expect(available).toEqual([]);
+    expect(unit("u1").status).toBe("sold");
+  });
+
+  it("does nothing when the same checkout is applied twice", async () => {
+    shippedPick();
+    await buy(["u1"]);
+    vi.setSystemTime(NOW + DAY);
+
+    const replay = await buy(["u1"]);
+
+    expect(replay.rejected).toEqual([]);
+    expect(replay.purchased.map((i) => i.unitId)).toEqual(["u1"]);
+    expect(pick("p1").items[0].purchasedAt).toBe(NOW);
+  });
+
+  it("rejects a piece that was received back before the payment landed", async () => {
+    shippedPick();
+    await markReturned("p1", { unitIds: ["u1"] });
+
+    const result = await buy(["u1", "u2"]);
+
+    expect(result.rejected.map((l) => l.unitId)).toEqual(["u1"]);
+    expect(result.purchased.map((i) => i.unitId)).toEqual(["u2"]);
+    expect(unit("u1").status).toBe("cleaning");
+    expect(pick("p1").items[0].purchasedAt).toBeUndefined();
+  });
+
+  it("rejects a piece already paid for in another checkout", async () => {
+    shippedPick();
+    await buy(["u1"]);
+
+    const second = await buy(["u1"], "cs_test_2");
+
+    expect(second.rejected.map((l) => l.unitId)).toEqual(["u1"]);
+    expect(second.purchased).toEqual([]);
+    expect(pick("p1").items[0].purchaseSessionId).toBe(SESSION);
+  });
+
+  it("rejects everything for a box that isn't the buyer's", async () => {
+    shippedPick({ uid: "someone-else" });
+
+    const result = await buy(["u1"]);
+
+    expect(result.rejected.map((l) => l.unitId)).toEqual(["u1"]);
+    expect(unit("u1").status).toBe("out");
+  });
+
+  it("rejects a piece that was never in the box", async () => {
+    shippedPick();
+    seedUnit("stray", { status: "available" });
+
+    const result = await buy(["stray"]);
+
+    expect(result.rejected.map((l) => l.unitId)).toEqual(["stray"]);
+    expect(unit("stray").status).toBe("available");
   });
 });
 

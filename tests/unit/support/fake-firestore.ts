@@ -268,12 +268,26 @@ function matchesFilter(value: Data, filter: Filter): boolean {
   );
 }
 
-/** Firestore rejects `undefined` field values; mirror that so tests catch it. */
-function assertNoUndefined(data: Data, path: string): void {
+/**
+ * Firestore rejects `undefined` anywhere in a document, including inside
+ * arrays and nested maps; mirror that so tests catch it.
+ */
+function assertNoUndefined(data: unknown, path: string): void {
+  if (Array.isArray(data)) {
+    data.forEach((value, index) => {
+      if (value === undefined) {
+        throw new Error(`Cannot write undefined to ${path}[${index}]`);
+      }
+      assertNoUndefined(value, `${path}[${index}]`);
+    });
+    return;
+  }
+  if (data === null || typeof data !== "object") return;
   for (const [key, value] of Object.entries(data)) {
     if (value === undefined) {
       throw new Error(`Cannot write undefined to field "${key}" at ${path}`);
     }
+    assertNoUndefined(value, `${path}.${key}`);
   }
 }
 

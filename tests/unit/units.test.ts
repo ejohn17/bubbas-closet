@@ -73,6 +73,18 @@ describe("updateUnit", () => {
     });
   });
 
+  it("refuses to change a garment a member has bought", async () => {
+    seedUnit("u1", { status: "sold", pickId: "p1" });
+
+    await expect(updateUnit("u1", { status: "available" })).rejects.toMatchObject({
+      code: "unit_sold",
+    });
+    await expect(updateUnit("u1", { condition: "fair" })).rejects.toMatchObject({
+      code: "unit_sold",
+    });
+    expect(unit("u1")).toMatchObject({ status: "sold", pickId: "p1" });
+  });
+
   it("keeps the member link when only the notes change", async () => {
     seedUnit("u1", { status: "out", holderUid: "member", pickId: "p1" });
     await updateUnit("u1", { notes: "small stain on cuff" });
@@ -87,6 +99,7 @@ describe("availabilityByProduct", () => {
     seedUnit("c", { size: "12M", condition: "fair" });
     seedUnit("d", { size: "12M", status: "reserved" });
     seedUnit("e", { size: "12M", status: "out" });
+    seedUnit("g", { size: "12M", status: "sold" });
     seedUnit("f", { productId: "dress", size: "2T" });
 
     expect(await availabilityByProduct()).toEqual({

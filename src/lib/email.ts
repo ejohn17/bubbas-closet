@@ -1,7 +1,12 @@
 import { BRAND } from "@/lib/config";
+import { outstandingItems } from "@/lib/db/picks";
 import type { PickDoc } from "@/lib/types";
 import { siteUrl } from "@/lib/stripe";
-import { outboundShippingIsFree, RULES } from "@/lib/rules";
+import {
+  flatOutboundShippingCents,
+  outboundShippingIsFree,
+  RULES,
+} from "@/lib/rules";
 
 /**
  * Transactional email via Resend (no SDK dependency).
@@ -113,9 +118,15 @@ function money(cents: number): string {
 export async function sendPickConfirmation(pick: PickDoc): Promise<void> {
   if (!pick.email) return;
   const estimate = pick.estimatedShippingCents ?? 0;
+  const flat = flatOutboundShippingCents({
+    tierId: pick.tierId,
+    country: pick.shippingAddress?.country,
+  });
   const shipping = outboundShippingIsFree(pick.tierId)
     ? "Outbound shipping is included on your plan.\n\n"
-    : estimate > 0
+    : flat !== null
+      ? `Shipping is a flat ${money(flat)} CAD, charged to your card when your box ships.\n\n`
+      : estimate > 0
       ? `Estimated outbound shipping is ${money(estimate)} CAD. This is not the actual shipping cost — the real postage is calculated when your box ships and charged then.\n\n`
       : "Outbound shipping will be billed at the label cost when the box ships.\n\n";
   await sendEmail({
@@ -134,7 +145,7 @@ export async function sendPickConfirmation(pick: PickDoc): Promise<void> {
 
 export async function sendReturnReminder(pick: PickDoc): Promise<void> {
   if (!pick.email) return;
-  const outstanding = pick.items.filter((i) => !i.returnedAt);
+  const outstanding = outstandingItems(pick);
   await sendEmail({
     to: pick.email,
     subject: `Time to send your ${BRAND.name} pieces back`,
@@ -160,7 +171,7 @@ export async function sendReturnLabel(input: {
   label: EmailAttachment;
 }): Promise<EmailResult> {
   const { pick, label } = input;
-  const outstanding = pick.items.filter((i) => !i.returnedAt);
+  const outstanding = outstandingItems(pick);
   const name = input.name?.trim();
   const due = formatDate(pick.dueAt);
   return sendEmailResult({
@@ -183,7 +194,7 @@ export async function sendReturnLabel(input: {
 
 export async function sendOverdueNotice(pick: PickDoc): Promise<void> {
   if (!pick.email) return;
-  const outstanding = pick.items.filter((i) => !i.returnedAt);
+  const outstanding = outstandingItems(pick);
   await sendEmail({
     to: pick.email,
     subject: `We're still waiting on your ${BRAND.name} pieces`,

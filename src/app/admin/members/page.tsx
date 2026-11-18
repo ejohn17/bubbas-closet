@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { listAllSubscriptions } from "@/lib/db/subscriptions";
 import { getUser } from "@/lib/db/users";
-import { listPicks } from "@/lib/db/picks";
+import { listPicks, outstandingItems } from "@/lib/db/picks";
 import { StatusPill } from "@/components/StatusPill";
 import { getTier } from "@/lib/tiers";
 import { formatDate } from "@/lib/format";
@@ -17,7 +17,7 @@ export default async function AdminMembers() {
       ]);
       const outstanding = picks
         .filter((p) => p.status === "shipped" || p.status === "partially_returned")
-        .reduce((n, p) => n + p.items.filter((i) => !i.returnedAt).length, 0);
+        .reduce((n, p) => n + outstandingItems(p).length, 0);
 
       return { sub, member, picks: picks.length, outstanding };
     }),

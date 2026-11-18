@@ -29,6 +29,11 @@ export function formatCad(cents?: number | null): string {
   return `${formatMoney(cents)} CAD`;
 }
 
+/** Like formatCad, but drops ".00" for whole dollars, e.g. 2500 → "$25 CAD". */
+export function formatCadCompact(cents: number): string {
+  return cents % 100 === 0 ? `$${cents / 100} CAD` : formatCad(cents);
+}
+
 /** Display a dollar amount from config, e.g. 49.99 → "$49.99". */
 export function formatDollars(amount: number): string {
   return `$${amount.toFixed(2)}`;

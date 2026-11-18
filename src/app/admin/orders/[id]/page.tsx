@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPick, isOverdue } from "@/lib/db/picks";
+import {
+  getPick,
+  isFullyPurchased,
+  isOverdue,
+  purchasedItems,
+} from "@/lib/db/picks";
 import { getUnit } from "@/lib/db/units";
 import { getUser } from "@/lib/db/users";
 import { getPrimarySubscription } from "@/lib/db/subscriptions";
@@ -9,7 +14,10 @@ import { ProductImage } from "@/components/ProductImage";
 import { StatusPill } from "@/components/StatusPill";
 import { OrderActions } from "@/components/admin/OrderActions";
 import { dueLabel, formatDate, formatDateTime, formatCad } from "@/lib/format";
-import { outboundShippingSummary } from "@/lib/rules";
+import {
+  flatOutboundShippingCents,
+  outboundShippingSummary,
+} from "@/lib/rules";
 import { ShippingCostLine } from "@/components/ShippingCostLine";
 
 export default async function AdminOrderDetail({
@@ -35,6 +43,11 @@ export default async function AdminOrderDetail({
   const address = pick.shippingAddress;
   const late = isOverdue(pick);
   const shipping = outboundShippingSummary(pick);
+  const purchased = purchasedItems(pick);
+  const purchasedCents = purchased.reduce(
+    (sum, item) => sum + (item.purchasePriceCents ?? 0),
+    0,
+  );
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -53,8 +66,15 @@ export default async function AdminOrderDetail({
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {member?.isAdmin ? (
+            <StatusPill status="test" label="Admin test order" />
+          ) : null}
           {late ? <StatusPill status="overdue" /> : null}
-          <StatusPill status={pick.status} />
+          {isFullyPurchased(pick) ? (
+            <StatusPill status="sold" label="Purchased" />
+          ) : (
+            <StatusPill status={pick.status} />
+          )}
         </div>
       </div>
 
@@ -82,9 +102,11 @@ export default async function AdminOrderDetail({
                     </p>
                   </div>
                   <span className="text-xs text-stone">
-                    {item.returnedAt
-                      ? `Returned ${formatDate(item.returnedAt)}`
-                      : "With member"}
+                    {item.purchasedAt
+                      ? `Purchased ${formatDate(item.purchasedAt)} · ${formatCad(item.purchasePriceCents)}`
+                      : item.returnedAt
+                        ? `Returned ${formatDate(item.returnedAt)}`
+                        : "With member"}
                   </span>
                 </li>
               ))}
@@ -100,6 +122,7 @@ export default async function AdminOrderDetail({
               size: item.size,
               sku: item.sku ?? skuByUnit.get(item.unitId),
               returnedAt: item.returnedAt ?? null,
+              purchasedAt: item.purchasedAt ?? null,
             }))}
             carrier={pick.carrier}
             trackingNumber={pick.trackingNumber}
@@ -107,8 +130,13 @@ export default async function AdminOrderDetail({
             feeCents={pick.feeCents}
             shippingCents={pick.shippingCents}
             estimatedShippingCents={shipping.cents}
+            flatShippingCents={flatOutboundShippingCents({
+              tierId: pick.tierId,
+              country: address?.country,
+            })}
             tierId={pick.tierId}
             email={pick.email ?? member?.email}
+            isTestAccount={member?.isAdmin === true}
           />
         </div>
 
@@ -146,11 +174,24 @@ export default async function AdminOrderDetail({
             <section className="card p-5">
               <ShippingCostLine audience="admin" {...shipping} />
               {shipping.kind === "charged" &&
-              typeof pick.estimatedShippingCents === "number" ? (
+              typeof pick.estimatedShippingCents === "number" &&
+              pick.estimatedShippingCents !== pick.shippingCents ? (
                 <p className="mt-2 text-xs text-stone">
                   Estimated at confirm: {formatCad(pick.estimatedShippingCents)}
                 </p>
               ) : null}
+            </section>
+          ) : null}
+
+          {purchased.length > 0 ? (
+            <section className="card p-5 text-sm">
+              <h2 className="font-semibold">Purchased</h2>
+              <p className="mt-3 text-stone">
+                {purchased.length} {purchased.length === 1 ? "piece" : "pieces"}{" "}
+                bought by the member for {formatCad(purchasedCents)}, paid
+                through Stripe. Don&apos;t expect {purchased.length === 1 ? "it" : "them"}{" "}
+                back.
+              </p>
             </section>
           ) : null}
 
@@ -193,7 +234,7 @@ export default async function AdminOrderDetail({
                 </>
               ) : null}
               <div className="flex justify-between gap-3">
-                <dt>Returned</dt>
+                <dt>{purchased.length > 0 ? "Closed" : "Returned"}</dt>
                 <dd>{formatDate(pick.returnedAt)}</dd>
               </div>
             </dl>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { countUnitsByStatus } from "@/lib/db/units";
-import { listPicks, isOverdue } from "@/lib/db/picks";
+import { listPicks, isOverdue, outstandingItems } from "@/lib/db/picks";
 import { countSubscriptionsByStatus } from "@/lib/db/subscriptions";
 import { listProducts } from "@/lib/db/products";
 import { StatusPill } from "@/components/StatusPill";
@@ -33,8 +33,10 @@ export default async function AdminOverview() {
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Overview</h1>
           <p className="mt-2 text-stone">
-            {products.length} styles · {Object.values(units).reduce((a, b) => a + b, 0)}{" "}
+            {products.length} styles ·{" "}
+            {Object.values(units).reduce((a, b) => a + b, 0) - units.sold}{" "}
             garments tracked
+            {units.sold > 0 ? ` · ${units.sold} sold to members` : ""}
           </p>
         </div>
         <div className="flex gap-3">
@@ -120,7 +122,7 @@ export default async function AdminOverview() {
                         {pick.shippingAddress?.name ?? pick.email ?? "Member"}
                       </span>
                       <span className="block text-xs text-stone">
-                        {pick.items.filter((i) => !i.returnedAt).length} outstanding ·{" "}
+                        {outstandingItems(pick).length} outstanding ·{" "}
                         {dueLabel(pick.dueAt)}
                       </span>
                     </span>

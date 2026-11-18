@@ -2,6 +2,8 @@ import Link from "next/link";
 import { listProducts } from "@/lib/db/products";
 import { availabilityByProduct } from "@/lib/db/units";
 import { hasTag, matchesLabel, uniqueLabels } from "@/lib/filters";
+import { formatCad } from "@/lib/format";
+import { isForSale } from "@/lib/rules";
 import { ProductImage } from "@/components/ProductImage";
 import { AdminSearch } from "@/components/admin/AdminSearch";
 import { FilterTabs } from "@/components/admin/FilterTabs";
@@ -222,7 +224,13 @@ export default async function AdminProducts({
                       ) : null}
                     </p>
                     <p className="mt-0.5 truncate text-sm text-stone">
-                      {[product.brand, product.category]
+                      {[
+                        product.brand,
+                        product.category,
+                        isForSale(product)
+                          ? `buy for ${formatCad(product.purchasePriceCents)}`
+                          : null,
+                      ]
                         .filter(Boolean)
                         .join(" · ") || "—"}
                     </p>

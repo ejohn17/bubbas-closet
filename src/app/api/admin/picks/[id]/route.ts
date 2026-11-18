@@ -5,16 +5,25 @@ import {
   getPick,
   markReturned,
   markShipped,
+  outstandingItems,
   recordFee,
+  resetTestPick,
   updatePickNotes,
 } from "@/lib/db/picks";
 import { getUser } from "@/lib/db/users";
 import { chargeFee } from "@/lib/billing";
 import { sendReturnLabel, sendShippedNotice } from "@/lib/email";
-import { outboundShippingIsFree } from "@/lib/rules";
+import { flatOutboundShippingCents, outboundShippingIsFree } from "@/lib/rules";
 import type { UnitCondition } from "@/lib/types";
 
-type Action = "ship" | "return" | "cancel" | "notes" | "fee" | "returnLabel";
+type Action =
+  | "ship"
+  | "return"
+  | "cancel"
+  | "notes"
+  | "fee"
+  | "returnLabel"
+  | "resetTest";
 
 type Body = {
   action: Action;
@@ -56,10 +65,16 @@ export async function PATCH(
           );
         }
 
+        // Premier ships free; a flat-rate destination (Canada) is charged the
+        // flat amount whatever was typed; anywhere else is the label cost.
         const shippingFree = outboundShippingIsFree(pick.tierId);
+        const flatCents = flatOutboundShippingCents({
+          tierId: pick.tierId,
+          country: pick.shippingAddress?.country,
+        });
         const shippingCents = shippingFree
           ? 0
-          : Math.round(Number(body.shippingCents));
+          : (flatCents ?? Math.round(Number(body.shippingCents)));
 
         if (!shippingFree) {
           if (!Number.isFinite(shippingCents) || shippingCents < 50) {
@@ -121,10 +136,10 @@ export async function PATCH(
             "Return labels can only be sent for boxes that have shipped.",
           );
         }
-        if (!pick.items.some((item) => !item.returnedAt)) {
+        if (outstandingItems(pick).length === 0) {
           throw new DomainError(
             "nothing_outstanding",
-            "Every piece in this box is already back.",
+            "Every piece in this box is already back or was bought.",
           );
         }
 
@@ -163,6 +178,26 @@ export async function PATCH(
       case "cancel": {
         await cancelPick(id);
         return ok({ pick: await getPick(id) });
+      }
+
+      case "resetTest": {
+        // Only staff orders: resetting a real member's box would put garments
+        // they own, or still have, back on the shelf.
+        const pick = await getPick(id);
+        if (!pick) {
+          throw new DomainError("pick_not_found", "Order not found.", 404);
+        }
+        const member = await getUser(pick.uid);
+        if (member?.isAdmin !== true) {
+          throw new DomainError(
+            "not_test_order",
+            "Only orders placed by an admin account can be reset.",
+            403,
+          );
+        }
+
+        const result = await resetTestPick(id);
+        return ok(result);
       }
 
       case "notes": {

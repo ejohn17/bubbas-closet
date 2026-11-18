@@ -18,6 +18,7 @@ export default async function AdminProductDetail({
 
   const units = await listUnits({ productId: id });
   const available = units.filter((u) => u.status === "available").length;
+  const inInventory = units.filter((u) => u.status !== "sold").length;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -28,7 +29,10 @@ export default async function AdminProductDetail({
       <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-3xl font-semibold tracking-tight">{product.title}</h1>
         <p className="text-sm text-stone">
-          {available} of {units.length} garments available
+          {available} of {inInventory} garments available
+          {units.length > inInventory
+            ? ` · ${units.length - inInventory} sold`
+            : ""}
         </p>
       </div>
 
@@ -44,6 +48,9 @@ export default async function AdminProductDetail({
             sizes: product.sizes.join(", "),
             retailValue: product.retailValueCents
               ? String(product.retailValueCents / 100)
+              : "",
+            purchasePrice: product.purchasePriceCents
+              ? (product.purchasePriceCents / 100).toFixed(2)
               : "",
             images: product.images,
             active: product.active,
@@ -77,8 +84,16 @@ export default async function AdminProductDetail({
                       {unit.sku ?? unit.id.slice(0, 6)}
                     </span>
                   </p>
-                  <p className="mt-1">
+                  <p className="mt-1 flex items-center gap-2 text-xs text-stone">
                     <StatusPill status={unit.status} />
+                    {unit.status === "sold" && unit.pickId ? (
+                      <Link
+                        href={`/admin/orders/${unit.pickId}`}
+                        className="link text-stone"
+                      >
+                        view sale
+                      </Link>
+                    ) : null}
                   </p>
                 </div>
 

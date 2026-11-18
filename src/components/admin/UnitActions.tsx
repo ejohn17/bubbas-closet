@@ -9,6 +9,7 @@ import { CONDITION_ORDER, conditionAdminLabel } from "@/lib/rules";
  * Per-garment controls. `reserved` and `out` are set by the app itself (holds
  * and shipped orders), so they aren't offered here — returns are recorded from
  * the order instead. Grading a garment below the rentable range retires it.
+ * A sold garment belongs to the member who bought it, so it has no controls.
  */
 export function UnitActions({
   unitId,
@@ -46,6 +47,10 @@ export function UnitActions({
     } finally {
       setPending(false);
     }
+  }
+
+  if (status === "sold") {
+    return <p className="text-xs text-stone">No longer in inventory</p>;
   }
 
   return (

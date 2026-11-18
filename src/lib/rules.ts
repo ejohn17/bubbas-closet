@@ -1,3 +1,4 @@
+import { formatCadCompact } from "@/lib/format";
 import type { UnitCondition } from "@/lib/types";
 
 /**
@@ -62,30 +63,35 @@ export const RULES = {
   usShippingTiers: ["signature", "premier"] as const,
 
   /**
-   * Tiers that are not billed for outbound shipping. Everyone else pays the
-   * label cost when admin marks the box shipped (C.8). Return labels are
-   * always on us, emailed by admin with a prepaid label attached.
+   * Tiers that are not billed for outbound shipping. Everyone else pays when
+   * admin marks the box shipped (C.8): the flat rate below where there is one,
+   * otherwise the label cost. Return labels are always on us, emailed by admin
+   * with a prepaid label attached.
    */
   freeOutboundShippingTiers: ["premier"] as const,
 
   /**
-   * Estimated outbound postage by destination, using item count as a stand-in
-   * for package weight — the same idea as Shopify shipping zones + weight
-   * brackets. Shown on confirmed orders until the real label is billed (C.9).
-   * Amounts are CAD cents and defaults pending typical-label confirmation.
+   * Flat outbound shipping by destination, in CAD cents. A box to one of these
+   * countries costs this whatever is in it, so the member knows the amount
+   * when they confirm and admin doesn't type it at ship time. Destinations
+   * not listed are billed the label cost. Client request 2026-11-18 (C.8).
+   */
+  flatOutboundShippingCents: { CA: 2500 } as FlatRates,
+
+  /**
+   * Estimated outbound postage for destinations billed at the label cost,
+   * using item count as a stand-in for package weight — the same idea as
+   * Shopify shipping zones + weight brackets. Shown on confirmed orders until
+   * the real label is billed (C.9). Amounts are CAD cents and defaults
+   * pending typical-label confirmation.
    */
   outboundShippingEstimateBrackets: {
-    CA: [
-      { maxItems: 10, cents: 1400 },
-      { maxItems: 20, cents: 2000 },
-      { maxItems: 40, cents: 3000 },
-    ],
     US: [
       { maxItems: 10, cents: 2200 },
       { maxItems: 20, cents: 3200 },
       { maxItems: 40, cents: 4800 },
     ],
-  },
+  } as EstimateBrackets,
 
   /**
    * Conditions a member can rent. Anything outside this list is withheld from
@@ -95,7 +101,27 @@ export const RULES = {
   rentableConditions: ["new", "excellent", "good"] as UnitCondition[],
 } as const;
 
+/**
+ * Stripe won't charge less than this in CAD, so a garment's purchase price
+ * can't be set lower: a member may buy a single piece on its own.
+ */
+export const MIN_PURCHASE_PRICE_CENTS = 50;
+
+/** A style is for sale once admin has given it a chargeable purchase price. */
+export function isForSale(product: {
+  purchasePriceCents?: number | null;
+}): product is { purchasePriceCents: number } {
+  return (
+    typeof product.purchasePriceCents === "number" &&
+    product.purchasePriceCents >= MIN_PURCHASE_PRICE_CENTS
+  );
+}
+
 export type ShippingCountry = (typeof RULES.shippingCountries)[number];
+
+/** Spelled out because RULES can't refer to its own type. */
+type FlatRates = Partial<Record<"US" | "CA", number>>;
+type EstimateBrackets = Partial<Record<"US" | "CA", ShippingEstimateBracket[]>>;
 
 export const SHIPPING_COUNTRY_LABELS: Record<ShippingCountry, string> = {
   US: "United States",
@@ -199,19 +225,89 @@ export function outboundShippingIsFree(
   );
 }
 
+/** How outbound shipping to one destination is charged on a given plan. */
+export type OutboundShippingRate =
+  | { kind: "included" }
+  | { kind: "flat"; cents: number; country: ShippingCountry }
+  | { kind: "label"; country: ShippingCountry };
+
+/**
+ * Included on Premier; otherwise the destination's flat rate, or the label
+ * cost where it has none. A missing country is treated as Canada, the same
+ * default the estimate has always used; confirm requires an address anyway.
+ */
+export function outboundShippingRate(input: {
+  tierId?: string | null;
+  country?: string | null;
+}): OutboundShippingRate {
+  if (outboundShippingIsFree(input.tierId)) return { kind: "included" };
+  const country = normalizeShippingCountry(input.country) ?? "CA";
+  const cents = RULES.flatOutboundShippingCents[country];
+  return cents === undefined
+    ? { kind: "label", country }
+    : { kind: "flat", cents, country };
+}
+
+/** The flat amount to charge at ship time, or null if admin enters the label cost. */
+export function flatOutboundShippingCents(input: {
+  tierId?: string | null;
+  country?: string | null;
+}): number | null {
+  const rate = outboundShippingRate(input);
+  return rate.kind === "flat" ? rate.cents : null;
+}
+
+/** Flat-rate destinations first, which reads better in copy. */
+function byFlatFirst(countries: readonly ShippingCountry[]): ShippingCountry[] {
+  const flat = (c: ShippingCountry) =>
+    RULES.flatOutboundShippingCents[c] === undefined ? 1 : 0;
+  return [...countries].sort((a, b) => flat(a) - flat(b));
+}
+
+/**
+ * How outbound shipping is charged across some destinations, e.g. "a flat
+ * $25 CAD within Canada and the label cost to the United States".
+ */
+export function describeOutboundRates(
+  countries: readonly ShippingCountry[],
+): string {
+  const parts = byFlatFirst(countries).map((country) => {
+    const cents = RULES.flatOutboundShippingCents[country];
+    const place = formatShippingCountries([country]);
+    return cents === undefined
+      ? `the label cost to ${place}`
+      : `a flat ${formatCadCompact(cents)} within ${place}`;
+  });
+  if (parts.length <= 1) return parts[0] ?? "";
+  return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+}
+
 /** Short member-facing line for how outbound vs return shipping is billed. */
 export function shippingCostNote(tierId?: string | null): string {
   if (outboundShippingIsFree(tierId)) {
     return "Outbound shipping is included. Return labels are always on us.";
   }
-  return "Outbound shipping is billed at the label cost when your box ships. Return labels are always on us.";
+  return `Outbound shipping is ${describeOutboundRates(shippingCountriesForTier(tierId))}, charged when your box ships. Return labels are always on us.`;
 }
 
-/** One-line label for tier cards. */
+const SHORT_COUNTRY: Record<ShippingCountry, string> = {
+  CA: "Canada",
+  US: "the US",
+};
+
+/** One-line label for tier cards, e.g. "Outbound shipping $25 CAD flat". */
 export function outboundShippingShortNote(tierId: string): string {
-  return outboundShippingIsFree(tierId)
-    ? "Outbound shipping included"
-    : "Outbound shipping billed at cost";
+  if (outboundShippingIsFree(tierId)) return "Outbound shipping included";
+
+  const countries = byFlatFirst(shippingCountriesForTier(tierId));
+  const several = countries.length > 1;
+  const parts = countries.map((country) => {
+    const cents = RULES.flatOutboundShippingCents[country];
+    return cents === undefined
+      ? `at cost${several ? ` to ${SHORT_COUNTRY[country]}` : ""}`
+      : `${formatCadCompact(cents)} flat${several ? ` in ${SHORT_COUNTRY[country]}` : ""}`;
+  });
+  return `Outbound shipping ${parts.join(", ")}`;
 }
 
 export type ShippingEstimateBracket = {
@@ -219,24 +315,30 @@ export type ShippingEstimateBracket = {
   cents: number;
 };
 
-/** Postage estimate for a box, before the actual label is purchased. */
+/**
+ * What outbound shipping will cost for a box, before it ships: the flat rate
+ * where the destination has one, otherwise a postage estimate from the piece
+ * count. Stored on the pick at confirm time.
+ */
 export function estimateOutboundShippingCents(input: {
   tierId?: string | null;
   country?: string | null;
   itemCount: number;
 }): number {
-  if (outboundShippingIsFree(input.tierId)) return 0;
   if (input.itemCount <= 0) return 0;
 
-  const country = normalizeShippingCountry(input.country) ?? "CA";
-  const brackets = RULES.outboundShippingEstimateBrackets[country];
+  const rate = outboundShippingRate(input);
+  if (rate.kind === "included") return 0;
+  if (rate.kind === "flat") return rate.cents;
+
+  const brackets = RULES.outboundShippingEstimateBrackets[rate.country] ?? [];
   const match =
     brackets.find((bracket) => input.itemCount <= bracket.maxItems) ??
     brackets[brackets.length - 1];
   return match?.cents ?? 0;
 }
 
-export type OutboundShippingKind = "included" | "estimated" | "charged";
+export type OutboundShippingKind = "included" | "flat" | "estimated" | "charged";
 
 export type OutboundShippingSummary = {
   kind: OutboundShippingKind;
@@ -244,9 +346,11 @@ export type OutboundShippingSummary = {
 };
 
 /**
- * What to show for outbound shipping on an order: included (Premier), an
- * estimate while the box is still pending, or the amount billed at ship time.
- * Older picks without a stored estimate are computed from the current table.
+ * What to show for outbound shipping on an order: included (Premier), the
+ * amount billed at ship time, or before that the flat rate or an estimate.
+ * The flat rate is read from the current rules rather than the stored
+ * estimate, so a box confirmed before the rate changed shows what it will be
+ * charged. Older picks without a stored estimate are computed from the table.
  */
 export function outboundShippingSummary(pick: {
   tierId: string;
@@ -267,6 +371,12 @@ export function outboundShippingSummary(pick: {
   if (billed) {
     return { kind: "charged", cents: pick.shippingCents ?? 0 };
   }
+
+  const flat = flatOutboundShippingCents({
+    tierId: pick.tierId,
+    country: pick.shippingAddress?.country,
+  });
+  if (flat !== null) return { kind: "flat", cents: flat };
 
   const estimated =
     typeof pick.estimatedShippingCents === "number"

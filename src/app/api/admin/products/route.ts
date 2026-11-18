@@ -24,6 +24,7 @@ export async function POST(request: Request) {
       images: body.images,
       sizes: body.sizes,
       retailValueCents: body.retailValueCents,
+      purchasePriceCents: body.purchasePriceCents,
       active: body.active,
     });
     return ok({ product });

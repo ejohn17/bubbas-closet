@@ -4,6 +4,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { BRAND, CYCLE_LABEL, TIERS } from "@/lib/config";
 import {
   RULES,
+  describeOutboundRates,
   formatShippingCountries,
   outboundShippingIsFree,
   shippingCountriesForTier,
@@ -109,17 +110,22 @@ export default function TermsPage() {
               const dest = formatShippingCountries(countries);
               return `${tier.name} ships to ${dest}${countries.length === 1 ? " only" : ""}`;
             }).join(". ")}. `}
-            Outbound shipping is billed at the label cost on{" "}
+            Outbound shipping on{" "}
             {TIERS.filter((tier) => !outboundShippingIsFree(tier.id))
               .map((tier) => tier.name)
               .join(" and ")}{" "}
-            when your box ships.{" "}
+            is {describeOutboundRates(RULES.shippingCountries)}, charged to
+            your card when your box ships.{" "}
             {TIERS.filter((tier) => outboundShippingIsFree(tier.id))
               .map((tier) => tier.name)
               .join(" and ")}{" "}
-            includes outbound shipping. Confirmed orders show an estimated
-            outbound cost based on destination and how many pieces are in the
-            box; you are charged the actual label cost when it ships. We email
+            includes outbound shipping.{" "}
+            {RULES.shippingCountries.some(
+              (country) => RULES.flatOutboundShippingCents[country] === undefined,
+            )
+              ? "Where the label cost applies, confirmed orders show an estimate based on how many pieces are in the box, and you are charged the actual label cost when it ships. "
+              : ""}
+            We email
             a prepaid return label when it&apos;s time to send your box back.
             You&apos;re responsible for keeping your shipping address and phone
             number current in your account; we aren&apos;t able to reroute a box

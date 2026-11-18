@@ -4,7 +4,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { StatusPill } from "@/components/StatusPill";
 import { ManageBillingButton } from "@/components/portal/ManageBillingButton";
 import { getEntitlement } from "@/lib/db/subscriptions";
-import { listPicks } from "@/lib/db/picks";
+import { listPicks, outstandingItems } from "@/lib/db/picks";
 import { isBillingPaused } from "@/lib/portal";
 import { requireUser } from "@/lib/session";
 import { BRAND } from "@/lib/config";
@@ -28,7 +28,7 @@ export default async function PortalPausedPage() {
   const picks = await listPicks({ uid: user.uid });
   const outstanding = picks
     .filter((p) => p.status === "shipped" || p.status === "partially_returned")
-    .flatMap((p) => p.items.filter((item) => !item.returnedAt));
+    .flatMap(outstandingItems);
 
   return (
     <>

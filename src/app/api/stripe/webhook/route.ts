@@ -2,10 +2,12 @@ import type Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { completeCheckoutSession, syncSubscription } from "@/lib/billing";
 import { setPendingTier } from "@/lib/db/subscriptions";
+import { completePurchaseSession, isPurchaseSession } from "@/lib/purchases";
 import { requireStripe } from "@/lib/stripe";
 
 /**
- * Stripe webhook: the only writer of subscription state in Firestore.
+ * Stripe webhook: the only writer of subscription state in Firestore. It also
+ * records garment purchases, which arrive as `checkout.session.completed`.
  *
  * Configure the endpoint at /api/stripe/webhook for at least:
  *   checkout.session.completed, customer.subscription.created,
@@ -40,9 +42,16 @@ export async function POST(request: Request) {
   try {
     switch (event.type) {
       case "checkout.session.completed": {
+        const session = event.data.object;
+        if (isPurchaseSession(session)) {
+          // A member buying pieces from their box. /portal/orders applies the
+          // same purchase when they land back on it; both paths are idempotent.
+          await completePurchaseSession(session);
+          break;
+        }
         // The /subscribe/complete return page runs the same sync so the member
         // isn't waiting on webhook delivery; both paths are idempotent.
-        await completeCheckoutSession(event.data.object);
+        await completeCheckoutSession(session);
         break;
       }
 

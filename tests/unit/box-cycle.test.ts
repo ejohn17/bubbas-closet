@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeDb } from "./support/fake-firestore";
-import { DAY, NOW, seedPick, seedSubscription } from "./support/fixtures";
+import { DAY, NOW, seedPick, seedSubscription, seedUnit } from "./support/fixtures";
 import { resolveBoxCycle } from "@/lib/box-cycle";
+import { markReturned, recordPurchase } from "@/lib/db/picks";
 import type { PickDoc, SubscriptionDoc } from "@/lib/types";
 
 vi.mock("@/lib/firebase-admin", async () => {
@@ -125,6 +126,58 @@ describe("resolveBoxCycle once the box is on its way back", () => {
     expect(resolveBoxCycle(sub(), [returned], RETURN_WINDOW)).toMatchObject({
       open: true,
       cycleKey: NEXT,
+    });
+  });
+
+  describe("when the member buys pieces instead of returning them", () => {
+    function boxOfTwo() {
+      for (const id of ["u1", "u2"]) {
+        seedUnit(id, { status: "out", holderUid: "member", pickId: "p1" });
+      }
+      pick({
+        items: ["u1", "u2"].map((unitId) => ({
+          unitId,
+          productId: "romper",
+          productTitle: "Romper",
+          size: "6M",
+          returnedAt: null,
+        })),
+      });
+    }
+
+    function buy(unitIds: string[]) {
+      return recordPurchase("p1", {
+        uid: "member",
+        sessionId: "cs_test_1",
+        lines: unitIds.map((unitId) => ({ unitId, priceCents: 2500 })),
+      });
+    }
+
+    const current = () => fakeDb.read<PickDoc>("picks", "p1") as PickDoc;
+
+    it("opens the next box from day 30 once every piece is bought", async () => {
+      boxOfTwo();
+      await buy(["u1", "u2"]);
+
+      expect(resolveBoxCycle(sub(), [current()], RETURN_WINDOW)).toMatchObject({
+        open: true,
+        cycleKey: NEXT,
+      });
+    });
+
+    it("opens once the bought piece is the last one out", async () => {
+      boxOfTwo();
+      await markReturned("p1", { unitIds: ["u1"] });
+      await buy(["u2"]);
+
+      expect(resolveBoxCycle(sub(), [current()], RETURN_WINDOW).open).toBe(true);
+    });
+
+    it("stays locked while a piece that wasn't bought is still out", async () => {
+      boxOfTwo();
+      await buy(["u1"]);
+
+      expect(resolveBoxCycle(sub(), [current()], RETURN_WINDOW).open).toBe(false);
     });
   });
 

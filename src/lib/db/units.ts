@@ -154,6 +154,15 @@ export async function updateUnit(
         404,
       );
     }
+    // A sold garment has left the building. Nothing here may put it back on
+    // the shelf or drop the link to the order it was sold on.
+    if (unit.status === "sold") {
+      throw new DomainError(
+        "unit_sold",
+        "This garment was bought by a member and is no longer in inventory.",
+        409,
+      );
+    }
 
     // Grading a garment below the rentable range retires it, so it can never
     // be offered to a member again without an explicit un-retire.
@@ -237,6 +246,7 @@ export async function countUnitsByStatus(): Promise<
     out: 0,
     cleaning: 0,
     retired: 0,
+    sold: 0,
   };
   for (const doc of snap.docs) {
     const status = (doc.data().status as UnitStatus) ?? "available";

@@ -3,7 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { formatDollars } from "@/lib/format";
-import { outboundShippingShortNote, shippingNoteForTier } from "@/lib/rules";
+import {
+  describeOutboundRates,
+  outboundShippingIsFree,
+  outboundShippingShortNote,
+  RULES,
+  shippingNoteForTier,
+} from "@/lib/rules";
 import { CYCLE_LABEL, tierFitsBox, type Tier } from "@/lib/config";
 
 export type TierOption = Tier & {
@@ -83,6 +89,12 @@ export function TierPicker({
       setPending(false);
     }
   }
+
+  const freeShippingTiers = tiers
+    .filter((t) => outboundShippingIsFree(t.id))
+    .map((t) => t.name)
+    .join(" and ");
+  const shippingSummary = `Outbound shipping is ${describeOutboundRates(RULES.shippingCountries)}${freeShippingTiers ? `, and included on ${freeShippingTiers}` : ""}.`;
 
   const selectedTier = tiers.find((t) => t.id === selected);
   const selectedFits = selectedTier
@@ -198,7 +210,7 @@ export function TierPicker({
         <p className="text-sm text-stone">
           {mode === "change"
             ? "Upgrades start now; downgrades begin next cycle."
-            : "Cancel anytime. Return shipping is included; outbound shipping is billed at cost except on Premier."}
+            : `Cancel anytime. Return shipping is included. ${shippingSummary}`}
         </p>
       </div>
     </div>

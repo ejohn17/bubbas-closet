@@ -1,6 +1,7 @@
 import { requireDb } from "@/lib/firebase-admin";
 import type { ProductDoc } from "@/lib/types";
 import { clean, COL, docTo, docsTo, DomainError, nowMs } from "@/lib/db/base";
+import { MIN_PURCHASE_PRICE_CENTS } from "@/lib/rules";
 import { sortSizes } from "@/lib/sizes";
 
 export type ProductInput = {
@@ -12,6 +13,8 @@ export type ProductInput = {
   images?: string[];
   sizes?: string[];
   retailValueCents?: number;
+  /** CAD cents a member pays to keep a garment; null takes it off sale. */
+  purchasePriceCents?: number | null;
   active?: boolean;
 };
 
@@ -80,6 +83,7 @@ export async function createProduct(input: ProductInput): Promise<ProductDoc> {
     images: normalizeList(input.images),
     sizes: sortSizes(normalizeList(input.sizes)),
     retailValueCents: input.retailValueCents,
+    purchasePriceCents: normalizePurchasePrice(input.purchasePriceCents),
     active: input.active ?? true,
     createdAt: ts,
     updatedAt: ts,
@@ -104,6 +108,7 @@ export async function updateProduct(
     images: input.images ? normalizeList(input.images) : undefined,
     sizes: input.sizes ? sortSizes(normalizeList(input.sizes)) : undefined,
     retailValueCents: input.retailValueCents,
+    purchasePriceCents: normalizePurchasePrice(input.purchasePriceCents),
     active: input.active,
     updatedAt: nowMs(),
   });
@@ -112,6 +117,24 @@ export async function updateProduct(
     .collection(COL.products)
     .doc(id)
     .set(patch, { merge: true });
+}
+
+/**
+ * Undefined leaves the price as it is and null clears it, so emptying the
+ * field in admin takes a style off sale.
+ */
+function normalizePurchasePrice(
+  value: number | null | undefined,
+): number | null | undefined {
+  if (value === undefined || value === null) return value;
+  const cents = Math.round(Number(value));
+  if (!Number.isFinite(cents) || cents < MIN_PURCHASE_PRICE_CENTS) {
+    throw new DomainError(
+      "invalid_purchase_price",
+      "Purchase price must be at least $0.50 CAD. Leave it blank if this style isn't for sale.",
+    );
+  }
+  return cents;
 }
 
 function normalizeList(value?: string[]): string[] {

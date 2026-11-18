@@ -2,8 +2,9 @@ import { formatCad } from "@/lib/format";
 import type { OutboundShippingKind } from "@/lib/rules";
 
 /**
- * Shopify-style shipping line for a confirmed order: an estimate until the
- * label is billed, then the charged amount (or Included on Premier).
+ * Shopify-style shipping line for a confirmed order: the flat rate (Canada)
+ * or an estimate until the box ships, then the charged amount (or Included
+ * on Premier).
  */
 export function ShippingCostLine({
   kind,
@@ -28,13 +29,17 @@ export function ShippingCostLine({
       ? audience === "member"
         ? "Outbound shipping is included on your plan. Return labels are on us."
         : "Premier — the member is not billed for outbound postage."
-      : kind === "estimated"
+      : kind === "flat"
         ? audience === "member"
-          ? "This is an estimate, not the actual shipping cost. The real postage is calculated when your box ships and charged then. Return labels are on us."
-          : "Based on destination and piece count. Enter the real label cost when you ship."
-        : audience === "member"
-          ? "Charged to the card on file. Return labels are on us."
-          : "Billed to the member's card.";
+          ? "Flat rate, charged to the card on file when your box ships. Return labels are on us."
+          : "Flat rate for Canada. Charged automatically when you mark the box shipped."
+        : kind === "estimated"
+          ? audience === "member"
+            ? "This is an estimate, not the actual shipping cost. The real postage is calculated when your box ships and charged then. Return labels are on us."
+            : "Based on destination and piece count. Enter the real label cost when you ship."
+          : audience === "member"
+            ? "Charged to the card on file. Return labels are on us."
+            : "Billed to the member's card.";
 
   if (compact) {
     return (

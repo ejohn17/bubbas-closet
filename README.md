@@ -160,10 +160,24 @@ confirm leaves inventory untouched. No credentials or emulators needed:
 npm test                     # or npm run test:watch
 ```
 
-**End-to-end test** (`tests/e2e`, Playwright) walks the whole signup path in
-Chromium: browse the public closet → create an account → add a piece → review
-the box → pick the recommended plan → pay on Stripe Checkout with the `4242`
-test card → membership active with the box ready to confirm. It runs against
+**End-to-end test** (`tests/e2e`, Playwright) follows one member through the
+whole loop in Chromium, as serial steps in one signed-in browser:
+
+1. Browse the public closet → create an account → add a piece → pick the
+   recommended plan → pay on Stripe Checkout with the `4242` test card →
+   membership active with the box ready to confirm.
+2. Confirm the box at the flat $25 CAD Canadian shipping rate (shown as the
+   real amount, not an estimate).
+3. Make the account an admin, set a purchase price on the style in admin, and
+   ship the box with **Ship and charge $25.00 CAD**. The test checks Stripe
+   billed exactly that.
+4. Buy the piece from **My rentals** through a one-off Stripe Checkout; the
+   piece shows as purchased and the garment is `sold`. The webhook for the same
+   checkout is delivered too and changes nothing.
+5. **Reset test order** from admin; the garment is available again and the
+   order is gone.
+
+It runs against
 the Firebase **Auth and Firestore emulators** (project `demo-bubbas`, which
 can't reach a real Firebase project) and **Stripe test mode**:
 
@@ -182,13 +196,16 @@ fetches the real `checkout.session.completed` event from Stripe and posts it,
 signed, to `/api/stripe/webhook`. Each run deletes the Stripe test customer it
 created.
 
-In CI the test stops at Stripe's hosted Checkout page: its bot protection
+In CI the test stops at each Stripe hosted Checkout page: its bot protection
 silently blocks automated payments from CI runners. It checks the session the
 app created (test mode, the Essential price, Canada-only shipping, the
 member's id, the return URL), completes the subscription through the Stripe API
 with the same test card, and sends the resulting event through the same signed
-webhook. Locally it fills in the real page; set `E2E_CHECKOUT_UI=1` to do that
-in CI too.
+webhook. The garment purchase works the same way: the test checks the payment
+session (card only, CAD, the garment's unit id on the line), takes the payment
+with a PaymentIntent, and sends the `checkout.session.completed` event; the app
+still reads the line items from the real session. Locally it fills in the real
+pages; set `E2E_CHECKOUT_UI=1` to do that in CI too.
 
 ## CI
 

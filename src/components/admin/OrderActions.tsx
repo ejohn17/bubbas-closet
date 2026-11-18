@@ -30,12 +30,14 @@ export type OrderItem = {
   size: string;
   sku?: string;
   returnedAt?: number | null;
+  purchasedAt?: number | null;
 };
 
 /**
  * Fulfilment controls for one order: ship it (charging outbound postage except
  * on Premier), receive garments back (all or some), email the return label
- * from the shop's address, charge a late fee, and keep internal notes.
+ * from the shop's address, charge a late fee, and keep internal notes. Orders
+ * placed by an admin account can also be reset once testing is done.
  */
 export function OrderActions({
   pickId,
@@ -47,8 +49,10 @@ export function OrderActions({
   feeCents,
   shippingCents,
   estimatedShippingCents,
+  flatShippingCents = null,
   tierId,
   email,
+  isTestAccount = false,
 }: {
   pickId: string;
   status: PickStatus;
@@ -59,8 +63,12 @@ export function OrderActions({
   feeCents?: number;
   shippingCents?: number;
   estimatedShippingCents?: number;
+  /** Set when the destination ships at a flat rate (Canada); no amount to type. */
+  flatShippingCents?: number | null;
   tierId: string;
   email?: string | null;
+  /** The order was placed by an admin account, so it can be reset. */
+  isTestAccount?: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
@@ -82,11 +90,17 @@ export function OrderActions({
   const [labelFile, setLabelFile] = useState<File | null>(null);
   const labelInputRef = useRef<HTMLInputElement>(null);
 
-  const outstanding = items.filter((item) => !item.returnedAt);
+  // Pieces the member bought aren't coming back, so they're never received.
+  const outstanding = items.filter(
+    (item) => !item.returnedAt && !item.purchasedAt,
+  );
   const shippingFree = outboundShippingIsFree(tierId);
+  const flatShipping = shippingFree ? null : flatShippingCents;
   const shippingCentsParsed = Math.round(Number(shippingValue) * 100);
   const canChargeShipping =
-    shippingFree || (Number.isFinite(shippingCentsParsed) && shippingCentsParsed >= 50);
+    shippingFree ||
+    flatShipping !== null ||
+    (Number.isFinite(shippingCentsParsed) && shippingCentsParsed >= 50);
 
   async function act(action: string, payload: Record<string, unknown> = {}) {
     setError(null);
@@ -146,6 +160,44 @@ export function OrderActions({
     }
   }
 
+  async function resetTestOrder() {
+    const confirmed = window.confirm(
+      "Reset this test order? Every garment on it goes back in the closet, " +
+        "including any that were bought, and the order is deleted. " +
+        "This can't be undone.",
+    );
+    if (!confirmed) return;
+
+    setError(null);
+    setNotice(null);
+    setPending("resetTest");
+
+    try {
+      const res = await fetch(`/api/admin/picks/${pickId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "resetTest" }),
+      });
+      const body = await res.json().catch(() => null);
+
+      if (!res.ok || !body?.ok) {
+        setError(body?.message ?? "Could not reset this order.");
+        setPending(null);
+        return;
+      }
+
+      // The order no longer exists, so leave its page rather than refresh it.
+      const params = new URLSearchParams({
+        reset: String(body.restored?.length ?? 0),
+        skipped: String(body.leftAlone?.length ?? 0),
+      });
+      router.push(`/admin/orders?${params.toString()}`);
+    } catch {
+      setError("Network error. Please try again.");
+      setPending(null);
+    }
+  }
+
   function toggle(unitId: string) {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -163,7 +215,9 @@ export function OrderActions({
           <p className="mt-1 text-sm text-stone">
             {shippingFree
               ? "Premier includes outbound shipping — the member will not be charged. Adding tracking emails them automatically."
-              : estimatedShippingCents
+              : flatShipping !== null
+                ? `Shipping within Canada is a flat ${formatCad(flatShipping)}. Submit to charge their card, mark the box shipped, and send a confirmation.`
+                : estimatedShippingCents
                 ? `Estimate is ${formatCad(estimatedShippingCents)} based on destination and piece count. Enter the label cost in CAD, then submit — we'll charge their card, mark the box shipped, and send a confirmation.`
                 : "Enter the label cost in CAD, then submit. We'll charge their card, mark the box shipped, and send a confirmation."}
           </p>
@@ -192,7 +246,7 @@ export function OrderActions({
                 onChange={(e) => setTrackingValue(e.target.value)}
               />
             </div>
-            {shippingFree ? null : (
+            {shippingFree || flatShipping !== null ? null : (
               <div className="w-28">
                 <label className="label" htmlFor="shipping-cost">
                   Shipping (CAD $)
@@ -215,7 +269,9 @@ export function OrderActions({
                 act("ship", {
                   carrier: carrierValue,
                   trackingNumber: trackingValue,
-                  shippingCents: shippingFree ? 0 : shippingCentsParsed,
+                  shippingCents: shippingFree
+                    ? 0
+                    : (flatShipping ?? shippingCentsParsed),
                 })
               }
             >
@@ -225,7 +281,9 @@ export function OrderActions({
                   : "Charging…"
                 : shippingFree
                   ? "Mark shipped"
-                  : "Ship and charge"}
+                  : flatShipping !== null
+                    ? `Ship and charge ${formatCad(flatShipping)}`
+                    : "Ship and charge"}
             </button>
           </div>
 
@@ -421,6 +479,32 @@ export function OrderActions({
               {pending === "fee" ? "Charging…" : "Charge fee"}
             </button>
           </div>
+        </section>
+      ) : null}
+
+      {isTestAccount ? (
+        <section className="card border-dashed p-5">
+          <h2 className="font-semibold">Reset test order</h2>
+          <p className="mt-1 text-sm text-stone">
+            This order was placed by an admin account. When you&apos;re done
+            testing, reset it to put every garment back in the closet as it was
+            before the box was confirmed, including pieces that were bought or
+            already received back. The order is deleted, so the account can
+            confirm a new box straight away.
+          </p>
+          <p className="mt-2 text-sm text-stone">
+            Stripe charges on this order (shipping, fees, purchases) are not
+            refunded. In test mode that doesn&apos;t matter; with a live card,
+            refund them from the Stripe dashboard.
+          </p>
+          <button
+            type="button"
+            className="btn-danger mt-4"
+            disabled={pending !== null}
+            onClick={resetTestOrder}
+          >
+            {pending === "resetTest" ? "Resetting…" : "Reset test order"}
+          </button>
         </section>
       ) : null}
 

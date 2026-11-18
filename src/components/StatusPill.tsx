@@ -10,12 +10,14 @@ const TONES: Record<string, string> = {
   returned: "bg-emerald-100 text-emerald-900",
   cancelled: "bg-line text-stone",
   overdue: "bg-red-100 text-red-800",
+  test: "bg-amber-50 text-amber-900 ring-1 ring-amber-300",
   // Units
   available: "bg-emerald-100 text-emerald-900",
   reserved: "bg-amber-100 text-amber-900",
   out: "bg-sky-100 text-sky-900",
   cleaning: "bg-indigo-100 text-indigo-900",
   retired: "bg-line text-stone",
+  sold: "bg-violet-100 text-violet-900",
   // Subscriptions
   active: "bg-emerald-100 text-emerald-900",
   trialing: "bg-sky-100 text-sky-900",

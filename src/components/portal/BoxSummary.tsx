@@ -6,7 +6,12 @@ import { useRouter } from "next/navigation";
 import { ProductImage } from "@/components/ProductImage";
 import { useHoldClock } from "@/components/portal/HoldBanner";
 import { CYCLE_LABEL, recommendTierFor } from "@/lib/config";
-import { conditionLabel, estimateOutboundShippingCents, RULES } from "@/lib/rules";
+import {
+  conditionLabel,
+  estimateOutboundShippingCents,
+  outboundShippingRate,
+  RULES,
+} from "@/lib/rules";
 import { formatDollars, formatCad } from "@/lib/format";
 import type { UnitCondition } from "@/lib/types";
 
@@ -57,6 +62,7 @@ export function BoxSummary({
     country,
     itemCount: items.length,
   });
+  const shippingIsFlat = outboundShippingRate({ tierId, country }).kind === "flat";
 
   const soonest = items.length
     ? Math.min(...items.map((i) => i.expiresAt))
@@ -242,6 +248,11 @@ export function BoxSummary({
               shipping === 0 ? (
                 <p className="mt-1 text-sm text-stone">
                   Outbound shipping included
+                </p>
+              ) : shippingIsFlat ? (
+                <p className="mt-1 max-w-sm text-sm text-stone">
+                  Shipping {formatCad(shipping)} flat rate, charged when your
+                  box ships.
                 </p>
               ) : (
                 <p className="mt-1 max-w-sm text-sm text-stone">

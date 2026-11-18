@@ -120,8 +120,18 @@ export function isOverdue(pick: PickDoc, at = nowMs()): boolean {
   return pick.dueAt < at;
 }
 
+/** Still with the member: neither received back nor bought outright. */
 export function outstandingItems(pick: PickDoc): PickItem[] {
-  return pick.items.filter((item) => !item.returnedAt);
+  return pick.items.filter((item) => !item.returnedAt && !item.purchasedAt);
+}
+
+export function purchasedItems(pick: PickDoc): PickItem[] {
+  return pick.items.filter((item) => Boolean(item.purchasedAt));
+}
+
+/** The member bought the whole box, so "returned" would be the wrong word. */
+export function isFullyPurchased(pick: PickDoc): boolean {
+  return pick.items.length > 0 && purchasedItems(pick).length === pick.items.length;
 }
 
 /** Turns the member's live holds into a pending pick order. */
@@ -186,17 +196,22 @@ export async function confirmBox(input: {
       }
     });
 
-    const items: PickItem[] = holds.map((hold, index) => ({
-      unitId: hold.unitId,
-      productId: hold.productId,
-      productTitle: hold.productTitle,
-      size: hold.size,
-      sku: units[index]?.sku,
-      condition: hold.condition ?? units[index]?.condition,
-      image: hold.image,
-      returnedAt: null,
-      returnCondition: null,
-    }));
+    // Each line goes through clean(): a style with no photo, or a garment with
+    // no SKU, leaves those fields undefined, and Firestore rejects undefined
+    // anywhere in a document, including inside this array.
+    const items: PickItem[] = holds.map((hold, index) =>
+      clean({
+        unitId: hold.unitId,
+        productId: hold.productId,
+        productTitle: hold.productTitle,
+        size: hold.size,
+        sku: units[index]?.sku,
+        condition: hold.condition ?? units[index]?.condition,
+        image: hold.image,
+        returnedAt: null,
+        returnCondition: null,
+      }),
+    );
 
     const pick: PickDoc = {
       id: pickRef.id,
@@ -315,7 +330,9 @@ export async function markSentBack(
 
 /**
  * Records a return. Omit `unitIds` to receive the whole order. Returned units
- * move to `cleaning`, from where admin flips them back to `available`.
+ * move to `cleaning`, from where admin flips them back to `available`. Only
+ * garments still out with the member are touched, so "receive everything"
+ * never pulls a piece they bought back into inventory.
  */
 export async function markReturned(
   id: string,
@@ -330,17 +347,21 @@ export async function markReturned(
     const pick = docTo<PickDoc>(pickSnap);
     if (!pick) throw new DomainError("pick_not_found", "Order not found.", 404);
 
-    const target = input?.unitIds?.length
-      ? new Set(input.unitIds)
-      : new Set(pick.items.filter((i) => !i.returnedAt).map((i) => i.unitId));
+    const requested = input?.unitIds?.length ? new Set(input.unitIds) : null;
+    const target = new Set(
+      outstandingItems(pick)
+        .filter((item) => !requested || requested.has(item.unitId))
+        .map((item) => item.unitId),
+    );
+    if (target.size === 0) return pick;
 
     const unitRefs = [...target].map((unitId) =>
       db.collection(COL.units).doc(unitId),
     );
-    const unitSnaps = unitRefs.length ? await tx.getAll(...unitRefs) : [];
+    const unitSnaps = await tx.getAll(...unitRefs);
 
     const items = pick.items.map((item) =>
-      target.has(item.unitId) && !item.returnedAt
+      target.has(item.unitId)
         ? {
             ...item,
             returnedAt: at,
@@ -349,7 +370,11 @@ export async function markReturned(
         : item,
     );
 
-    const allReturned = items.every((item) => Boolean(item.returnedAt));
+    // Bought pieces count as dealt with: the order closes once nothing is
+    // left to come back.
+    const allReturned = items.every(
+      (item) => Boolean(item.returnedAt) || Boolean(item.purchasedAt),
+    );
     const status: PickStatus = allReturned ? "returned" : "partially_returned";
 
     tx.set(
@@ -384,6 +409,108 @@ export async function markReturned(
     });
 
     return { ...pick, items, status } as PickDoc;
+  });
+}
+
+/** One garment on a paid checkout: what was bought and what it cost. */
+export type PurchaseLine = { unitId: string; priceCents: number };
+
+/**
+ * Records garments a member paid to keep instead of returning. Each one is
+ * marked on the order and its unit moves to `sold`, which takes it out of
+ * inventory for good. Once nothing is left to come back, the order closes the
+ * same way a full return does, which also unlocks the member's next box.
+ *
+ * Safe to run more than once for the same checkout session: the webhook and
+ * the page the member lands on after paying both call it.
+ *
+ * `rejected` lists lines that were paid for but can't be honoured, because the
+ * garment is already back with us or was paid for in another checkout. The
+ * caller owes the member a refund for those.
+ */
+export async function recordPurchase<Line extends PurchaseLine>(
+  id: string,
+  input: { uid: string; sessionId: string; lines: Line[] },
+): Promise<{ purchased: PickItem[]; rejected: Line[] }> {
+  const db = requireDb();
+  const pickRef = db.collection(COL.picks).doc(id);
+
+  return db.runTransaction(async (tx) => {
+    const at = nowMs();
+    const pick = docTo<PickDoc>(await tx.get(pickRef));
+    if (!pick || pick.uid !== input.uid) {
+      return { purchased: [], rejected: input.lines };
+    }
+
+    const accepted = new Map<string, Line>();
+    const rejected: Line[] = [];
+    for (const line of input.lines) {
+      const item = pick.items.find((i) => i.unitId === line.unitId);
+      if (item?.purchaseSessionId === input.sessionId) continue;
+      if (!item || item.returnedAt || item.purchasedAt || accepted.has(line.unitId)) {
+        rejected.push(line);
+      } else {
+        accepted.set(line.unitId, line);
+      }
+    }
+
+    const fromThisSession = (items: PickItem[]) =>
+      items.filter((item) => item.purchaseSessionId === input.sessionId);
+    if (accepted.size === 0) {
+      return { purchased: fromThisSession(pick.items), rejected };
+    }
+
+    const unitRefs = [...accepted.keys()].map((unitId) =>
+      db.collection(COL.units).doc(unitId),
+    );
+    const unitSnaps = await tx.getAll(...unitRefs);
+
+    const items = pick.items.map((item) => {
+      const line = accepted.get(item.unitId);
+      return line
+        ? {
+            ...item,
+            purchasedAt: at,
+            purchasePriceCents: line.priceCents,
+            purchaseSessionId: input.sessionId,
+          }
+        : item;
+    });
+
+    const closed = items.every(
+      (item) => Boolean(item.returnedAt) || Boolean(item.purchasedAt),
+    );
+
+    tx.set(
+      pickRef,
+      clean({
+        items,
+        status: closed ? ("returned" satisfies PickStatus) : pick.status,
+        returnedAt: closed ? at : (pick.returnedAt ?? null),
+        updatedAt: at,
+      }),
+      { merge: true },
+    );
+
+    // The order link stays on the unit so admin can trace a sold garment back
+    // to who bought it.
+    unitSnaps.forEach((unitSnap, index) => {
+      if (!unitSnap.exists) return;
+      tx.set(
+        unitRefs[index],
+        {
+          status: "sold" satisfies UnitDoc["status"],
+          holderUid: null,
+          holdId: null,
+          holdExpiresAt: null,
+          pickId: id,
+          updatedAt: at,
+        },
+        { merge: true },
+      );
+    });
+
+    return { purchased: fromThisSession(items), rejected };
   });
 }
 
@@ -431,6 +558,102 @@ export async function cancelPick(id: string): Promise<void> {
       );
     });
   });
+}
+
+export type TestResetResult = {
+  /** Garments put back in the closet (or retired, if graded unrentable). */
+  restored: string[];
+  /**
+   * Garments that have moved on since this order, e.g. back on the shelf and
+   * now with another member, so they were left as they are.
+   */
+  leftAlone: string[];
+};
+
+/**
+ * Undoes a test order completely: every garment it touched goes back to how
+ * it was before the box was confirmed, and the order is deleted. Purchased
+ * pieces stop being `sold`, pieces still out come back, and pieces received
+ * back are taken out of cleaning, all with the condition they shipped in.
+ *
+ * Only for orders placed by staff testing the site; the API route checks that
+ * the order belongs to an admin account. A real member's purchase must never
+ * go back on the shelf this way.
+ *
+ * A garment is only touched while it is still in the state this order left
+ * it in. Once it has moved on (flipped back to available, or rented by someone
+ * else) it is left alone, so a reset can't pull a garment out of another box.
+ * Stripe charges are not refunded here.
+ */
+export async function resetTestPick(id: string): Promise<TestResetResult> {
+  const db = requireDb();
+  const pickRef = db.collection(COL.picks).doc(id);
+
+  return db.runTransaction(async (tx) => {
+    const at = nowMs();
+    const pick = docTo<PickDoc>(await tx.get(pickRef));
+    if (!pick) throw new DomainError("pick_not_found", "Order not found.", 404);
+
+    const unitRefs = pick.items.map((item) =>
+      db.collection(COL.units).doc(item.unitId),
+    );
+    const unitSnaps = unitRefs.length ? await tx.getAll(...unitRefs) : [];
+
+    const restored: string[] = [];
+    const leftAlone: string[] = [];
+
+    pick.items.forEach((item, index) => {
+      const unit = docTo<UnitDoc>(unitSnaps[index]);
+      if (!unit) return;
+
+      if (!stillFromThisOrder(unit, item, pick.id)) {
+        // Already back on the shelf isn't lost, so it isn't worth reporting.
+        if (unit.status !== "available") leftAlone.push(unit.id);
+        return;
+      }
+
+      const condition = item.condition ?? unit.condition;
+      tx.set(
+        unitRefs[index],
+        {
+          status: isRentableCondition(condition) ? "available" : "retired",
+          condition,
+          holderUid: null,
+          holdId: null,
+          holdExpiresAt: null,
+          pickId: null,
+          updatedAt: at,
+        } satisfies Partial<UnitDoc>,
+        { merge: true },
+      );
+      restored.push(unit.id);
+    });
+
+    tx.delete(pickRef);
+    return { restored, leftAlone };
+  });
+}
+
+/**
+ * Whether a garment is still exactly where this order left it. Out or sold
+ * garments keep the order link. A garment received back loses the link, but
+ * nothing has touched it since if its last update is the return itself.
+ */
+function stillFromThisOrder(
+  unit: UnitDoc,
+  item: PickItem,
+  pickId: string,
+): boolean {
+  if (unit.pickId === pickId) {
+    return unit.status === "out" || unit.status === "sold";
+  }
+  return (
+    Boolean(item.returnedAt) &&
+    !unit.pickId &&
+    !unit.holderUid &&
+    (unit.status === "cleaning" || unit.status === "retired") &&
+    unit.updatedAt === item.returnedAt
+  );
 }
 
 export async function recordFee(id: string, feeCents: number): Promise<void> {

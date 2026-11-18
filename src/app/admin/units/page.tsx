@@ -18,6 +18,7 @@ const STATUSES: UnitStatus[] = [
   "out",
   "cleaning",
   "retired",
+  "sold",
 ];
 
 const NONE = "__none__";
@@ -232,7 +233,7 @@ export default async function AdminUnits({
                         href={`/admin/orders/${unit.pickId}`}
                         className="link text-stone"
                       >
-                        on order
+                        {unit.status === "sold" ? "view sale" : "on order"}
                       </Link>
                     ) : null}
                     <span>added {formatDate(unit.createdAt)}</span>

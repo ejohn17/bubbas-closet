@@ -82,6 +82,11 @@ export type ProductDoc = {
   /** Sizes this style is offered in; unit availability is what actually gates. */
   sizes: string[];
   retailValueCents?: number;
+  /**
+   * What a member pays, in CAD cents, to keep a garment of this style instead
+   * of returning it. Unset or null means the style isn't for sale.
+   */
+  purchasePriceCents?: number | null;
   active: boolean;
   createdAt: number;
   updatedAt: number;
@@ -92,7 +97,9 @@ export type UnitStatus =
   | "reserved"
   | "out"
   | "cleaning"
-  | "retired";
+  | "retired"
+  /** Bought by the member who was renting it; gone from inventory for good. */
+  | "sold";
 
 export type UnitCondition = "new" | "excellent" | "good" | "fair";
 
@@ -149,6 +156,12 @@ export type PickItem = {
   condition?: UnitCondition;
   returnedAt?: number | null;
   returnCondition?: UnitCondition | null;
+  /** Set when the member bought the garment instead of returning it. */
+  purchasedAt?: number | null;
+  /** What they paid for it, in CAD cents. */
+  purchasePriceCents?: number;
+  /** Stripe Checkout session that paid for it, so a replay is a no-op. */
+  purchaseSessionId?: string;
 };
 
 export type PickDoc = {
