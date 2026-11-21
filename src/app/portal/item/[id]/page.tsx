@@ -10,7 +10,7 @@ import { bestCondition, conditionLabel } from "@/lib/rules";
 import { ProductGallery } from "@/components/portal/ProductGallery";
 import { AddToBoxControls } from "@/components/portal/AddToBoxControls";
 import { FavoriteButton } from "@/components/portal/FavoriteButton";
-import { BackToListLink } from "@/components/portal/BackToListLink";
+import { BackToListLink } from "@/components/BackToListLink";
 
 export const metadata = { title: "Piece" };
 

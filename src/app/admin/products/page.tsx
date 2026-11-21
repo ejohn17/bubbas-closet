@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ReturnableList } from "@/components/ReturnableList";
 import { listProducts } from "@/lib/db/products";
 import { availabilityByProduct } from "@/lib/db/units";
 import { hasTag, matchesLabel, uniqueLabels } from "@/lib/filters";
@@ -198,57 +199,59 @@ export default async function AdminProducts({
             : "No products yet. Create your first style to start stocking the closet."}
         </p>
       ) : (
-        <ul className="mt-8 card divide-y divide-line">
-          {products.map((product) => {
-            const stock = availability[product.id];
+        <ReturnableList>
+          <ul className="mt-8 card divide-y divide-line">
+            {products.map((product) => {
+              const stock = availability[product.id];
 
-            return (
-              <li key={product.id}>
-                <Link
-                  href={`/admin/products/${product.id}`}
-                  className="flex items-center gap-4 p-4 transition hover:bg-cream/60"
-                >
-                  <ProductImage
-                    src={product.images[0]}
-                    alt={product.title}
-                    className="h-16 w-14 shrink-0 rounded-xl"
-                  />
+              return (
+                <li key={product.id}>
+                  <Link
+                    href={`/admin/products/${product.id}`}
+                    className="flex items-center gap-4 p-4 transition hover:bg-cream/60"
+                  >
+                    <ProductImage
+                      src={product.images[0]}
+                      alt={product.title}
+                      className="h-16 w-14 shrink-0 rounded-xl"
+                    />
 
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">
-                      {product.title}
-                      {!product.active ? (
-                        <span className="ml-2 text-xs font-normal text-stone">
-                          hidden
-                        </span>
-                      ) : null}
-                    </p>
-                    <p className="mt-0.5 truncate text-sm text-stone">
-                      {[
-                        product.brand,
-                        product.category,
-                        isForSale(product)
-                          ? `buy for ${formatCad(product.purchasePriceCents)}`
-                          : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ") || "—"}
-                    </p>
-                  </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">
+                        {product.title}
+                        {!product.active ? (
+                          <span className="ml-2 text-xs font-normal text-stone">
+                            hidden
+                          </span>
+                        ) : null}
+                      </p>
+                      <p className="mt-0.5 truncate text-sm text-stone">
+                        {[
+                          product.brand,
+                          product.category,
+                          isForSale(product)
+                            ? `buy for ${formatCad(product.purchasePriceCents)}`
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || "—"}
+                      </p>
+                    </div>
 
-                  <div className="hidden text-right text-sm sm:block">
-                    <p className="font-medium">{stock?.total ?? 0} available</p>
-                    <p className="text-stone">
-                      {product.sizes.length
-                        ? product.sizes.join(", ")
-                        : "no sizes yet"}
-                    </p>
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+                    <div className="hidden text-right text-sm sm:block">
+                      <p className="font-medium">{stock?.total ?? 0} available</p>
+                      <p className="text-stone">
+                        {product.sizes.length
+                          ? product.sizes.join(", ")
+                          : "no sizes yet"}
+                      </p>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </ReturnableList>
       )}
     </div>
   );

@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BackToListLink } from "@/components/BackToListLink";
 import {
   getPick,
   isFullyPurchased,
@@ -51,9 +51,7 @@ export default async function AdminOrderDetail({
 
   return (
     <div className="mx-auto max-w-4xl">
-      <Link href="/admin/orders" className="text-sm text-stone hover:text-ink">
-        ← Orders
-      </Link>
+      <BackToListLink href="/admin/orders" label="Orders" />
 
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
         <div>

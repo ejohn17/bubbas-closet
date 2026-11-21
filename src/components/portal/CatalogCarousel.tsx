@@ -15,14 +15,12 @@ export function CatalogCarousel({
   alt,
   href,
   offsetMs = 0,
-  onNavigate,
 }: {
   images: string[];
   alt: string;
   href: string;
   /** Stagger so neighbouring cards don't flip in lockstep. */
   offsetMs?: number;
-  onNavigate?: () => void;
 }) {
   const rootRef = useRef<HTMLAnchorElement>(null);
   const [index, setIndex] = useState(0);
@@ -65,7 +63,6 @@ export function CatalogCarousel({
     <Link
       ref={rootRef}
       href={href}
-      onNavigate={onNavigate}
       className="group relative block h-64 overflow-hidden bg-line/40"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}

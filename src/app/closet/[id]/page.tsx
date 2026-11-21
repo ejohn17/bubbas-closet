@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
-import { BackToListLink } from "@/components/portal/BackToListLink";
+import { BackToListLink } from "@/components/BackToListLink";
 import { GuestAddPrompt } from "@/components/portal/GuestAddPrompt";
 import { ProductGallery } from "@/components/portal/ProductGallery";
 import { BRAND } from "@/lib/config";

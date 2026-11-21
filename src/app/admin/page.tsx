@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ReturnableList } from "@/components/ReturnableList";
 import { countUnitsByStatus } from "@/lib/db/units";
 import { listPicks, isOverdue, outstandingItems } from "@/lib/db/picks";
 import { countSubscriptionsByStatus } from "@/lib/db/subscriptions";
@@ -59,81 +60,83 @@ export default async function AdminOverview() {
         ))}
       </ul>
 
-      <section className="mt-12 grid gap-8 lg:grid-cols-2">
-        <div>
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Ready to pack</h2>
-            <Link href="/admin/orders?status=pending" className="link text-sm text-stone">
-              All orders
-            </Link>
+      <ReturnableList>
+        <section className="mt-12 grid gap-8 lg:grid-cols-2">
+          <div>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Ready to pack</h2>
+              <Link href="/admin/orders?status=pending" className="link text-sm text-stone">
+                All orders
+              </Link>
+            </div>
+
+            {pending.length === 0 ? (
+              <p className="card mt-4 p-5 text-sm text-stone">
+                Nothing waiting — every confirmed box has shipped.
+              </p>
+            ) : (
+              <ul className="card mt-4 divide-y divide-line">
+                {pending.slice(0, 6).map((pick) => (
+                  <li key={pick.id}>
+                    <Link
+                      href={`/admin/orders/${pick.id}`}
+                      className="flex items-center justify-between gap-3 p-4 transition hover:bg-cream/60"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium">
+                          {pick.shippingAddress?.name ?? pick.email ?? "Member"}
+                        </span>
+                        <span className="block text-xs text-stone">
+                          {pick.items.length} items · confirmed{" "}
+                          {formatDate(pick.createdAt)}
+                        </span>
+                      </span>
+                      <StatusPill status={pick.status} />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
-          {pending.length === 0 ? (
-            <p className="card mt-4 p-5 text-sm text-stone">
-              Nothing waiting — every confirmed box has shipped.
-            </p>
-          ) : (
-            <ul className="card mt-4 divide-y divide-line">
-              {pending.slice(0, 6).map((pick) => (
-                <li key={pick.id}>
-                  <Link
-                    href={`/admin/orders/${pick.id}`}
-                    className="flex items-center justify-between gap-3 p-4 transition hover:bg-cream/60"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium">
-                        {pick.shippingAddress?.name ?? pick.email ?? "Member"}
-                      </span>
-                      <span className="block text-xs text-stone">
-                        {pick.items.length} items · confirmed{" "}
-                        {formatDate(pick.createdAt)}
-                      </span>
-                    </span>
-                    <StatusPill status={pick.status} />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+          <div>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Overdue returns</h2>
+              <Link href="/admin/orders?status=overdue" className="link text-sm text-stone">
+                All overdue
+              </Link>
+            </div>
 
-        <div>
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Overdue returns</h2>
-            <Link href="/admin/orders?status=overdue" className="link text-sm text-stone">
-              All overdue
-            </Link>
+            {overdue.length === 0 ? (
+              <p className="card mt-4 p-5 text-sm text-stone">
+                Nothing overdue. Returns are on schedule.
+              </p>
+            ) : (
+              <ul className="card mt-4 divide-y divide-line">
+                {overdue.slice(0, 6).map((pick) => (
+                  <li key={pick.id}>
+                    <Link
+                      href={`/admin/orders/${pick.id}`}
+                      className="flex items-center justify-between gap-3 p-4 transition hover:bg-cream/60"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium">
+                          {pick.shippingAddress?.name ?? pick.email ?? "Member"}
+                        </span>
+                        <span className="block text-xs text-stone">
+                          {outstandingItems(pick).length} outstanding ·{" "}
+                          {dueLabel(pick.dueAt)}
+                        </span>
+                      </span>
+                      <StatusPill status="overdue" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
-
-          {overdue.length === 0 ? (
-            <p className="card mt-4 p-5 text-sm text-stone">
-              Nothing overdue. Returns are on schedule.
-            </p>
-          ) : (
-            <ul className="card mt-4 divide-y divide-line">
-              {overdue.slice(0, 6).map((pick) => (
-                <li key={pick.id}>
-                  <Link
-                    href={`/admin/orders/${pick.id}`}
-                    className="flex items-center justify-between gap-3 p-4 transition hover:bg-cream/60"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium">
-                        {pick.shippingAddress?.name ?? pick.email ?? "Member"}
-                      </span>
-                      <span className="block text-xs text-stone">
-                        {outstandingItems(pick).length} outstanding ·{" "}
-                        {dueLabel(pick.dueAt)}
-                      </span>
-                    </span>
-                    <StatusPill status="overdue" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </section>
+        </section>
+      </ReturnableList>
 
       <section className="mt-12">
         <h2 className="text-lg font-semibold">Memberships</h2>

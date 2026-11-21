@@ -1,32 +1,21 @@
 "use client";
 
-import {
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { FavoriteButton } from "@/components/portal/FavoriteButton";
 import { AddToBoxControls } from "@/components/portal/AddToBoxControls";
 import { CatalogCarousel } from "@/components/portal/CatalogCarousel";
 import { GuestAddPrompt } from "@/components/portal/GuestAddPrompt";
 import { CollapsibleFilters } from "@/components/CollapsibleFilters";
 import { FilterSelect, FiltersMenu } from "@/components/FilterSelect";
+import { ReturnableList, useListUrl } from "@/components/ReturnableList";
 import { CYCLE_LABEL, recommendTierFor } from "@/lib/config";
 import { hasTag, matchesLabel, uniqueLabels } from "@/lib/filters";
 import { formatDollars } from "@/lib/format";
 import { bestCondition, conditionLabel } from "@/lib/rules";
 import { compareSizes } from "@/lib/sizes";
 import type { CatalogItem } from "@/lib/catalog";
-import {
-  clearCatalogReturn,
-  pendingCatalogReturn,
-  rememberCatalogPosition,
-  type CatalogFilters,
-} from "@/lib/catalog-return";
+import { pendingListReturn, type CatalogFilters } from "@/lib/list-return";
 
 export type { CatalogItem };
 
@@ -56,14 +45,12 @@ export function Catalog({
   defaultSize?: string;
   mode?: CatalogMode;
 }) {
-  const pathname = usePathname();
-  const listRef = useRef<HTMLUListElement>(null);
-
-  // Coming back from a piece opened here: same filters, same card on screen.
-  const [returning] = useState(() => pendingCatalogReturn(pathname));
+  // Coming back from a piece opened here: same filters. ReturnableList below
+  // then scrolls the card back into place.
+  const listUrl = useListUrl();
   const [filters, setFilters] = useState<CatalogFilters>(
     () =>
-      returning?.filters ?? {
+      pendingListReturn(listUrl)?.filters ?? {
         search: "",
         category: "",
         brand: "",
@@ -90,31 +77,6 @@ export function Catalog({
     key: K,
     value: CatalogFilters[K],
   ) => setFilters((current) => ({ ...current, [key]: value }));
-
-  // Before paint, so the list never flashes at the top first.
-  useLayoutEffect(() => {
-    clearCatalogReturn();
-    if (!returning) return;
-    const card = findCard(listRef.current, returning.itemId);
-    window.scrollTo(
-      0,
-      card
-        ? card.getBoundingClientRect().top + window.scrollY - returning.cardTop
-        : returning.scrollY,
-    );
-  }, [returning]);
-
-  const rememberOpening = (itemId: string, itemPath: string) => {
-    rememberCatalogPosition({
-      listPath: pathname,
-      itemPath,
-      itemId,
-      filters,
-      cardTop:
-        findCard(listRef.current, itemId)?.getBoundingClientRect().top ?? 0,
-      scrollY: window.scrollY,
-    });
-  };
 
   const inBox = useMemo(
     () => new Set(items.filter((i) => i.inBox).map((i) => i.id)),
@@ -198,7 +160,7 @@ export function Catalog({
     hasOutOfStock;
 
   return (
-    <div>
+    <ReturnableList filters={filters}>
       <div className="flex flex-col gap-4">
         <input
           type="search"
@@ -301,10 +263,7 @@ export function Catalog({
           Nothing matches that yet. Try another filter or search.
         </p>
       ) : (
-        <ul
-          ref={listRef}
-          className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
-        >
+        <ul className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((item, cardIndex) => {
             const isInBox = inBox.has(item.id);
             const href = `${itemBase}/${item.id}`;
@@ -318,7 +277,6 @@ export function Catalog({
             return (
               <li
                 key={item.id}
-                data-item-id={item.id}
                 className="card overflow-hidden transition hover:border-accent/60"
               >
                 <div className="relative">
@@ -327,7 +285,6 @@ export function Catalog({
                     alt={item.title}
                     href={href}
                     offsetMs={(cardIndex % 7) * 350}
-                    onNavigate={() => rememberOpening(item.id, href)}
                   />
                   {mode !== "guest" ? (
                     <FavoriteButton
@@ -339,11 +296,7 @@ export function Catalog({
                 </div>
 
                 <div className="p-5">
-                  <Link
-                    href={href}
-                    onNavigate={() => rememberOpening(item.id, href)}
-                    className="group block"
-                  >
+                  <Link href={href} className="group block">
                     <h3 className="font-medium transition group-hover:text-accent-dark">
                       {item.title}
                     </h3>
@@ -383,12 +336,9 @@ export function Catalog({
           })}
         </ul>
       )}
-    </div>
+    </ReturnableList>
   );
 }
-
-const findCard = (list: HTMLElement | null, itemId: string) =>
-  list?.querySelector<HTMLElement>(`[data-item-id="${CSS.escape(itemId)}"]`);
 
 function FilterChip({
   active,

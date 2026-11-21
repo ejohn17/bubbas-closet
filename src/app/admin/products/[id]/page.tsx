@@ -6,6 +6,7 @@ import { ProductForm } from "@/components/admin/ProductForm";
 import { AddUnitsForm } from "@/components/admin/AddUnitsForm";
 import { UnitActions } from "@/components/admin/UnitActions";
 import { StatusPill } from "@/components/StatusPill";
+import { BackToListLink } from "@/components/BackToListLink";
 
 export default async function AdminProductDetail({
   params,
@@ -22,9 +23,7 @@ export default async function AdminProductDetail({
 
   return (
     <div className="mx-auto max-w-3xl">
-      <Link href="/admin/products" className="text-sm text-stone hover:text-ink">
-        ← Products
-      </Link>
+      <BackToListLink href="/admin/products" label="Products" />
 
       <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-3xl font-semibold tracking-tight">{product.title}</h1>

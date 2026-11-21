@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ReturnableList } from "@/components/ReturnableList";
 import { listProducts } from "@/lib/db/products";
 import { countUnitsByStatus, listUnits } from "@/lib/db/units";
 import { matchesLabel, uniqueLabels } from "@/lib/filters";
@@ -203,52 +204,54 @@ export default async function AdminUnits({
           )}
         </p>
       ) : (
-        <ul className="card mt-8 divide-y divide-line">
-          {units.map((unit) => {
-            const product = productById.get(unit.productId);
+        <ReturnableList>
+          <ul className="card mt-8 divide-y divide-line">
+            {units.map((unit) => {
+              const product = productById.get(unit.productId);
 
-            return (
-              <li
-                key={unit.id}
-                className="flex flex-wrap items-center justify-between gap-3 p-4"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">
-                    <Link
-                      href={`/admin/products/${unit.productId}`}
-                      className="hover:text-accent-dark"
-                    >
-                      {unit.productTitle}
-                    </Link>
-                    <span className="ml-2 font-normal text-stone">
-                      size {unit.size}
-                      {product?.category ? ` · ${product.category}` : ""}
-                    </span>
-                  </p>
-                  <p className="mt-1 flex items-center gap-2 text-xs text-stone">
-                    <StatusPill status={unit.status} />
-                    <span>{unit.sku ?? unit.id.slice(0, 6)}</span>
-                    {unit.pickId ? (
+              return (
+                <li
+                  key={unit.id}
+                  className="flex flex-wrap items-center justify-between gap-3 p-4"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">
                       <Link
-                        href={`/admin/orders/${unit.pickId}`}
-                        className="link text-stone"
+                        href={`/admin/products/${unit.productId}`}
+                        className="hover:text-accent-dark"
                       >
-                        {unit.status === "sold" ? "view sale" : "on order"}
+                        {unit.productTitle}
                       </Link>
-                    ) : null}
-                    <span>added {formatDate(unit.createdAt)}</span>
-                  </p>
-                </div>
+                      <span className="ml-2 font-normal text-stone">
+                        size {unit.size}
+                        {product?.category ? ` · ${product.category}` : ""}
+                      </span>
+                    </p>
+                    <p className="mt-1 flex items-center gap-2 text-xs text-stone">
+                      <StatusPill status={unit.status} />
+                      <span>{unit.sku ?? unit.id.slice(0, 6)}</span>
+                      {unit.pickId ? (
+                        <Link
+                          href={`/admin/orders/${unit.pickId}`}
+                          className="link text-stone"
+                        >
+                          {unit.status === "sold" ? "view sale" : "on order"}
+                        </Link>
+                      ) : null}
+                      <span>added {formatDate(unit.createdAt)}</span>
+                    </p>
+                  </div>
 
-                <UnitActions
-                  unitId={unit.id}
-                  status={unit.status}
-                  condition={unit.condition}
-                />
-              </li>
-            );
-          })}
-        </ul>
+                  <UnitActions
+                    unitId={unit.id}
+                    status={unit.status}
+                    condition={unit.condition}
+                  />
+                </li>
+              );
+            })}
+          </ul>
+        </ReturnableList>
       )}
     </div>
   );

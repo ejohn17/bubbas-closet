@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ReturnableList } from "@/components/ReturnableList";
 import {
   isFullyPurchased,
   isOverdue,
@@ -103,68 +104,70 @@ export default async function AdminOrders({
             : "No orders in this view."}
         </p>
       ) : (
-        <ul className="card mt-8 divide-y divide-line">
-          {picks.map((pick) => {
-            const outstanding = outstandingItems(pick).length;
-            const purchased = purchasedItems(pick).length;
-            const late = isOverdue(pick);
-            const who = pick.shippingAddress?.name ?? pick.email ?? "Member";
-            const shipping = outboundShippingSummary(pick);
-            const shippingNote =
-              pick.status === "cancelled"
-                ? null
-                : shipping.kind === "included"
-                  ? "shipping included"
-                  : shipping.kind === "estimated"
-                    ? `est. shipping ${formatCad(shipping.cents)}`
-                    : shipping.kind === "flat"
-                      ? `shipping ${formatCad(shipping.cents)} flat`
-                      : `shipping ${formatCad(shipping.cents)}`;
+        <ReturnableList>
+          <ul className="card mt-8 divide-y divide-line">
+            {picks.map((pick) => {
+              const outstanding = outstandingItems(pick).length;
+              const purchased = purchasedItems(pick).length;
+              const late = isOverdue(pick);
+              const who = pick.shippingAddress?.name ?? pick.email ?? "Member";
+              const shipping = outboundShippingSummary(pick);
+              const shippingNote =
+                pick.status === "cancelled"
+                  ? null
+                  : shipping.kind === "included"
+                    ? "shipping included"
+                    : shipping.kind === "estimated"
+                      ? `est. shipping ${formatCad(shipping.cents)}`
+                      : shipping.kind === "flat"
+                        ? `shipping ${formatCad(shipping.cents)} flat`
+                        : `shipping ${formatCad(shipping.cents)}`;
 
-            return (
-              <li key={pick.id}>
-                <Link
-                  href={`/admin/orders/${pick.id}`}
-                  className="flex flex-wrap items-center justify-between gap-3 p-4 transition hover:bg-cream/60"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{who}</p>
-                    <p className="mt-0.5 truncate text-sm text-stone">
-                      {pick.email && pick.shippingAddress?.name
-                        ? `${pick.email} · `
-                        : ""}
-                      {pick.items.length} items · confirmed{" "}
-                      {formatDate(pick.createdAt)}
-                      {shippingNote ? ` · ${shippingNote}` : ""}
-                      {pick.trackingNumber
-                        ? ` · ${pick.trackingNumber}`
-                        : ""}
-                      {pick.returnTrackingNumber
-                        ? ` · return ${pick.returnTrackingNumber}`
-                        : ""}
-                      {outstanding > 0 && pick.status !== "pending"
-                        ? ` · ${outstanding} outstanding`
-                        : ""}
-                      {purchased > 0 ? ` · ${purchased} purchased` : ""}
-                    </p>
-                  </div>
+              return (
+                <li key={pick.id}>
+                  <Link
+                    href={`/admin/orders/${pick.id}`}
+                    className="flex flex-wrap items-center justify-between gap-3 p-4 transition hover:bg-cream/60"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{who}</p>
+                      <p className="mt-0.5 truncate text-sm text-stone">
+                        {pick.email && pick.shippingAddress?.name
+                          ? `${pick.email} · `
+                          : ""}
+                        {pick.items.length} items · confirmed{" "}
+                        {formatDate(pick.createdAt)}
+                        {shippingNote ? ` · ${shippingNote}` : ""}
+                        {pick.trackingNumber
+                          ? ` · ${pick.trackingNumber}`
+                          : ""}
+                        {pick.returnTrackingNumber
+                          ? ` · return ${pick.returnTrackingNumber}`
+                          : ""}
+                        {outstanding > 0 && pick.status !== "pending"
+                          ? ` · ${outstanding} outstanding`
+                          : ""}
+                        {purchased > 0 ? ` · ${purchased} purchased` : ""}
+                      </p>
+                    </div>
 
-                  <div className="flex items-center gap-3 text-sm text-stone">
-                    {pick.status === "shipped" ||
-                    pick.status === "partially_returned" ? (
-                      <span>{dueLabel(pick.dueAt)}</span>
-                    ) : null}
-                    {isFullyPurchased(pick) ? (
-                      <StatusPill status="sold" label="Purchased" />
-                    ) : (
-                      <StatusPill status={late ? "overdue" : pick.status} />
-                    )}
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+                    <div className="flex items-center gap-3 text-sm text-stone">
+                      {pick.status === "shipped" ||
+                      pick.status === "partially_returned" ? (
+                        <span>{dueLabel(pick.dueAt)}</span>
+                      ) : null}
+                      {isFullyPurchased(pick) ? (
+                        <StatusPill status="sold" label="Purchased" />
+                      ) : (
+                        <StatusPill status={late ? "overdue" : pick.status} />
+                      )}
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </ReturnableList>
       )}
     </div>
   );
