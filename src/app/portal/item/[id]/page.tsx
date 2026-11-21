@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/session";
 import { getPortalAccess } from "@/lib/portal";
@@ -11,6 +10,7 @@ import { bestCondition, conditionLabel } from "@/lib/rules";
 import { ProductGallery } from "@/components/portal/ProductGallery";
 import { AddToBoxControls } from "@/components/portal/AddToBoxControls";
 import { FavoriteButton } from "@/components/portal/FavoriteButton";
+import { BackToListLink } from "@/components/portal/BackToListLink";
 
 export const metadata = { title: "Piece" };
 
@@ -45,9 +45,7 @@ export default async function PortalItemPage({
 
   return (
     <div className="mx-auto max-w-5xl">
-      <Link href="/portal" className="text-sm text-stone transition hover:text-ink">
-        ← The closet
-      </Link>
+      <BackToListLink href="/portal" label="The closet" />
 
       <div className="mt-6 grid gap-10 lg:grid-cols-2 lg:items-start">
         <ProductGallery images={product.images} alt={product.title} />

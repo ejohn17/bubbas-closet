@@ -1,7 +1,14 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { FavoriteButton } from "@/components/portal/FavoriteButton";
 import { AddToBoxControls } from "@/components/portal/AddToBoxControls";
 import { CatalogCarousel } from "@/components/portal/CatalogCarousel";
@@ -14,6 +21,12 @@ import { formatDollars } from "@/lib/format";
 import { bestCondition, conditionLabel } from "@/lib/rules";
 import { compareSizes } from "@/lib/sizes";
 import type { CatalogItem } from "@/lib/catalog";
+import {
+  clearCatalogReturn,
+  pendingCatalogReturn,
+  rememberCatalogPosition,
+  type CatalogFilters,
+} from "@/lib/catalog-return";
 
 export type { CatalogItem };
 
@@ -43,18 +56,66 @@ export function Catalog({
   defaultSize?: string;
   mode?: CatalogMode;
 }) {
-  const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
-  const [brandFilter, setBrandFilter] = useState("");
-  const [tagFilter, setTagFilter] = useState("");
-  const [conditionFilter, setConditionFilter] = useState("");
-  const [inStockOnly, setInStockOnly] = useState(false);
-  const [sizeFilter, setSizeFilter] = useState<string>(
-    defaultSize &&
-      items.some((i) => i.sizes.some((s) => s.size === defaultSize))
-      ? defaultSize
-      : "",
+  const pathname = usePathname();
+  const listRef = useRef<HTMLUListElement>(null);
+
+  // Coming back from a piece opened here: same filters, same card on screen.
+  const [returning] = useState(() => pendingCatalogReturn(pathname));
+  const [filters, setFilters] = useState<CatalogFilters>(
+    () =>
+      returning?.filters ?? {
+        search: "",
+        category: "",
+        brand: "",
+        tag: "",
+        condition: "",
+        inStockOnly: false,
+        size:
+          defaultSize &&
+          items.some((i) => i.sizes.some((s) => s.size === defaultSize))
+            ? defaultSize
+            : "",
+      },
   );
+  const {
+    search,
+    category: categoryFilter,
+    brand: brandFilter,
+    tag: tagFilter,
+    condition: conditionFilter,
+    size: sizeFilter,
+    inStockOnly,
+  } = filters;
+  const setFilter = <K extends keyof CatalogFilters>(
+    key: K,
+    value: CatalogFilters[K],
+  ) => setFilters((current) => ({ ...current, [key]: value }));
+
+  // Before paint, so the list never flashes at the top first.
+  useLayoutEffect(() => {
+    clearCatalogReturn();
+    if (!returning) return;
+    const card = findCard(listRef.current, returning.itemId);
+    window.scrollTo(
+      0,
+      card
+        ? card.getBoundingClientRect().top + window.scrollY - returning.cardTop
+        : returning.scrollY,
+    );
+  }, [returning]);
+
+  const rememberOpening = (itemId: string, itemPath: string) => {
+    rememberCatalogPosition({
+      listPath: pathname,
+      itemPath,
+      itemId,
+      filters,
+      cardTop:
+        findCard(listRef.current, itemId)?.getBoundingClientRect().top ?? 0,
+      scrollY: window.scrollY,
+    });
+  };
+
   const inBox = useMemo(
     () => new Set(items.filter((i) => i.inBox).map((i) => i.id)),
     [items],
@@ -144,7 +205,7 @@ export function Catalog({
           className="input max-w-xs"
           placeholder="Search the closet"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => setFilter("search", e.target.value)}
           aria-label="Search the closet"
         />
 
@@ -156,21 +217,21 @@ export function Catalog({
                 allLabel="All categories"
                 value={categoryFilter}
                 options={categories.map((value) => ({ value, label: value }))}
-                onChange={setCategoryFilter}
+                onChange={(value) => setFilter("category", value)}
               />
               <FilterSelect
                 label="Brand"
                 allLabel="All brands"
                 value={brandFilter}
                 options={brands.map((value) => ({ value, label: value }))}
-                onChange={setBrandFilter}
+                onChange={(value) => setFilter("brand", value)}
               />
               <FilterSelect
                 label="Size"
                 allLabel="All sizes"
                 value={sizeFilter}
                 options={allSizes.map((value) => ({ value, label: value }))}
-                onChange={setSizeFilter}
+                onChange={(value) => setFilter("size", value)}
               />
               <FilterSelect
                 label="Condition"
@@ -182,7 +243,7 @@ export function Catalog({
                     value as Parameters<typeof conditionLabel>[0],
                   ),
                 }))}
-                onChange={setConditionFilter}
+                onChange={(value) => setFilter("condition", value)}
               />
               {hasOutOfStock ? (
                 <FilterSelect
@@ -190,7 +251,9 @@ export function Catalog({
                   allLabel="All pieces"
                   value={inStockOnly ? "in-stock" : ""}
                   options={[{ value: "in-stock", label: "In stock" }]}
-                  onChange={(value) => setInStockOnly(value === "in-stock")}
+                  onChange={(value) =>
+                    setFilter("inStockOnly", value === "in-stock")
+                  }
                 />
               ) : null}
             </div>
@@ -200,7 +263,7 @@ export function Catalog({
                 label="Tags"
                 summary={
                   tagFilter ? (
-                    <FilterChip active onClick={() => setTagFilter("")}>
+                    <FilterChip active onClick={() => setFilter("tag", "")}>
                       {tagFilter}
                     </FilterChip>
                   ) : null
@@ -209,7 +272,7 @@ export function Catalog({
                 <div className="flex flex-wrap items-center gap-1.5">
                   <FilterChip
                     active={!tagFilter}
-                    onClick={() => setTagFilter("")}
+                    onClick={() => setFilter("tag", "")}
                   >
                     All tags
                   </FilterChip>
@@ -217,7 +280,7 @@ export function Catalog({
                     <FilterChip
                       key={option}
                       active={tagFilter === option}
-                      onClick={() => setTagFilter(option)}
+                      onClick={() => setFilter("tag", option)}
                     >
                       {option}
                     </FilterChip>
@@ -238,7 +301,10 @@ export function Catalog({
           Nothing matches that yet. Try another filter or search.
         </p>
       ) : (
-        <ul className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <ul
+          ref={listRef}
+          className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+        >
           {visible.map((item, cardIndex) => {
             const isInBox = inBox.has(item.id);
             const href = `${itemBase}/${item.id}`;
@@ -252,6 +318,7 @@ export function Catalog({
             return (
               <li
                 key={item.id}
+                data-item-id={item.id}
                 className="card overflow-hidden transition hover:border-accent/60"
               >
                 <div className="relative">
@@ -260,6 +327,7 @@ export function Catalog({
                     alt={item.title}
                     href={href}
                     offsetMs={(cardIndex % 7) * 350}
+                    onNavigate={() => rememberOpening(item.id, href)}
                   />
                   {mode !== "guest" ? (
                     <FavoriteButton
@@ -271,7 +339,11 @@ export function Catalog({
                 </div>
 
                 <div className="p-5">
-                  <Link href={href} className="group block">
+                  <Link
+                    href={href}
+                    onNavigate={() => rememberOpening(item.id, href)}
+                    className="group block"
+                  >
                     <h3 className="font-medium transition group-hover:text-accent-dark">
                       {item.title}
                     </h3>
@@ -314,6 +386,9 @@ export function Catalog({
     </div>
   );
 }
+
+const findCard = (list: HTMLElement | null, itemId: string) =>
+  list?.querySelector<HTMLElement>(`[data-item-id="${CSS.escape(itemId)}"]`);
 
 function FilterChip({
   active,

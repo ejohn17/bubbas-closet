@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
+import { BackToListLink } from "@/components/portal/BackToListLink";
 import { GuestAddPrompt } from "@/components/portal/GuestAddPrompt";
 import { ProductGallery } from "@/components/portal/ProductGallery";
 import { BRAND } from "@/lib/config";
@@ -43,9 +43,7 @@ export default async function ClosetItemPage({
     <>
       <SiteHeader />
       <main className="mx-auto w-full max-w-5xl flex-1 px-6 pb-24 pt-6">
-        <Link href="/closet" className="text-sm text-stone transition hover:text-ink">
-          ← The closet
-        </Link>
+        <BackToListLink href="/closet" label="The closet" />
 
         <div className="mt-6 grid gap-10 lg:grid-cols-2 lg:items-start">
           <ProductGallery images={product.images} alt={product.title} />
