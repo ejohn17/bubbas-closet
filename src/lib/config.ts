@@ -12,6 +12,8 @@ export const CYCLE_LABEL = `${RULES.cycleDays} days`;
 
 export const BRAND = {
   name: "Bubbas Closet",
+  /** Registered legal business name, shown in the footer (required by Meta). */
+  legalName: "Bubbas Style Collective",
   tagline: "Dress them in something new every month",
   description:
     "Rent quality toddler clothes & accessories, swap your wardrobe monthly, we handle the laundry.",

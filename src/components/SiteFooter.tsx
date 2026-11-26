@@ -6,8 +6,9 @@ export function SiteFooter() {
   return (
     <footer className="mx-auto w-full max-w-6xl px-6 py-10 text-sm text-stone">
       <div className="flex flex-col items-center justify-between gap-3 border-t border-line pt-6 sm:flex-row">
-        <span>
-          © {new Date().getFullYear()} {BRAND.name}
+        <span className="text-center sm:text-left">
+          © {new Date().getFullYear()} {BRAND.name}, operated by{" "}
+          {BRAND.legalName}
         </span>
 
         <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
